@@ -68,7 +68,7 @@ export function ProPricingCard({
   const features = [
     { text: "Everything in Starter (Forever Free)", isHighlight: true },
     { text: "AI Meeting Summaries & Action Items", hasProBadge: true },
-    { text: "Board Brain: Semantic Vector Canvas Search", hasProBadge: true },
+    { text: "Never Lose an Idea (Instant Canvas Memory)", hasProBadge: true },
     { text: "Real-time Multiplayer Collaboration Sync", hasProBadge: true },
     { text: "Laser Pointer & Interactive Presentation Mode", hasProBadge: true },
     { text: "Watermark-Free Clean 4K Ultra-HD Exports", hasProBadge: true },

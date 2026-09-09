@@ -19,7 +19,7 @@ interface CodeOnBoardWidgetProps {
   isOpen: boolean;
   onClose: () => void;
   editor?: Editor | null;
-  onInsertToCanvas?: (content: string, isError: boolean) => void;
+  onInsertToCanvas?: (content: string, isError: boolean, language?: string) => void;
 }
 
 export default function CodeOnBoardWidget({
@@ -190,15 +190,20 @@ export default function CodeOnBoardWidget({
 
   // Send output to whiteboard canvas as a Note shape
   const handleInsertOutputToCanvas = () => {
-    const contentToInsert =
+    const rawContent =
       result?.stdout?.trim() ||
       result?.returnValue ||
       (result?.error ? `Error:\n${result.error}` : code);
 
-    const noteText = `${currentLangInfo.icon} ${currentLangInfo.name} Output:\n\n${contentToInsert.slice(0, 600)}`;
+    const langTitle = language
+      ? language.charAt(0).toUpperCase() + language.slice(1)
+      : "Code";
+
+    const noteText = `${langTitle} Output:\n\n${rawContent.slice(0, 600)}`;
 
     if (onInsertToCanvas) {
-      onInsertToCanvas(noteText, !!result?.error);
+      // Pass clean execution result and language so canvas formats cleanly without duplicate headers
+      onInsertToCanvas(rawContent, !!result?.error, language);
       return;
     }
 

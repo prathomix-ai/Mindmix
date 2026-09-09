@@ -228,7 +228,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── 2. Round-Robin Key Selection ──
+    // ── 2. Round-Robin Key Selection & Provider Routing ──
     const geminiKeys = getKeys(
       process.env.GEMINI_KEYS,
       process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY
@@ -238,27 +238,23 @@ export async function POST(req: NextRequest) {
       process.env.GROQ_API_KEY
     );
 
+    // Strict Groq Routing for High-Speed Quick Commands (Draw Container, Decision Gateway)
+    const isStrictGroqCommand =
+      commandType === "rectangle" ||
+      commandType === "diamond" ||
+      commandType === "container" ||
+      commandType === "decision" ||
+      Boolean(
+        prompt &&
+          /\b(draw\s+container|container|decision\s+gateway|decision|gateway|box)\b/i.test(prompt)
+      );
+
     let rawJson = "";
     let providerUsed = "";
     let attempts = 0;
-    const maxAttempts = (geminiKeys.length || 0) + (groqKeys.length || 0) || 1;
 
-    // Try Gemini pool with round-robin rotation
-    while (geminiKeys.length > 0 && attempts < geminiKeys.length && !rawJson) {
-      const { key, nextPointer } = getNextKey(geminiKeys, geminiPointer);
-      geminiPointer = nextPointer;
-      attempts++;
-      try {
-        rawJson = await callGemini(key, prompt || `Draw a ${commandType}`);
-        providerUsed = `Gemini (Key #${geminiPointer || 1})`;
-        break;
-      } catch (err: any) {
-        console.warn(`[Load Balancer] Gemini key failed, cycling to next key:`, err.message);
-      }
-    }
-
-    // Fallback to Groq pool with round-robin rotation if Gemini failed
-    if (!rawJson && groqKeys.length > 0) {
+    // 1. If strict Groq command, strictly query Groq for maximum token generation speed
+    if (isStrictGroqCommand && groqKeys.length > 0) {
       let groqAttempts = 0;
       while (groqAttempts < groqKeys.length && !rawJson) {
         const { key, nextPointer } = getNextKey(groqKeys, groqPointer);
@@ -269,7 +265,42 @@ export async function POST(req: NextRequest) {
           providerUsed = `Groq Llama-3.3 (Key #${groqPointer || 1})`;
           break;
         } catch (err: any) {
-          console.warn(`[Load Balancer] Groq key failed, cycling to next key:`, err.message);
+          console.warn(`[Load Balancer] Strict Groq key failed for ${commandType}:`, err.message);
+        }
+      }
+    }
+
+    // 2. If not a strict Groq command (or Groq was unavailable), use standard Gemini pool
+    if (!rawJson) {
+      if (!isStrictGroqCommand) {
+        while (geminiKeys.length > 0 && attempts < geminiKeys.length && !rawJson) {
+          const { key, nextPointer } = getNextKey(geminiKeys, geminiPointer);
+          geminiPointer = nextPointer;
+          attempts++;
+          try {
+            rawJson = await callGemini(key, prompt || `Draw a ${commandType}`);
+            providerUsed = `Gemini (Key #${geminiPointer || 1})`;
+            break;
+          } catch (err: any) {
+            console.warn(`[Load Balancer] Gemini key failed, cycling to next key:`, err.message);
+          }
+        }
+      }
+
+      // Fallback to Groq pool if Gemini failed or Groq was needed
+      if (!rawJson && groqKeys.length > 0) {
+        let groqAttempts = 0;
+        while (groqAttempts < groqKeys.length && !rawJson) {
+          const { key, nextPointer } = getNextKey(groqKeys, groqPointer);
+          groqPointer = nextPointer;
+          groqAttempts++;
+          try {
+            rawJson = await callGroq(key, prompt || `Draw a ${commandType}`);
+            providerUsed = `Groq Llama-3.3 (Key #${groqPointer || 1})`;
+            break;
+          } catch (err: any) {
+            console.warn(`[Load Balancer] Groq fallback failed:`, err.message);
+          }
         }
       }
     }

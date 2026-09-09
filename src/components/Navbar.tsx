@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ShieldCheck, ArrowRight, Menu, X, LogIn } from "lucide-react";
@@ -36,13 +37,16 @@ export function Navbar({ onOpenAuth }: NavbarProps) {
         
         {/* Left: Brand Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
-          <motion.span
-            whileHover={{ rotate: 180 }}
-            transition={{ duration: 0.4 }}
-            className="text-xl font-mono font-bold text-neon-cyan drop-shadow-[0_0_12px_rgba(0,245,255,0.6)]"
-          >
-            ✦
-          </motion.span>
+          <div className="relative w-9 h-9 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
+            <Image
+              src="/mindmix-logo-v2.png"
+              alt="MindMix Logo"
+              width={36}
+              height={36}
+              className="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(168,85,247,0.55)]"
+              priority
+            />
+          </div>
           <span className="font-mono font-extrabold text-xl tracking-tight text-zinc-900 dark:text-white">
             MindMix
           </span>

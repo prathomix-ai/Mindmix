@@ -26,6 +26,7 @@ import {
   Route,
   Briefcase,
   PenTool,
+  Loader2,
 } from "lucide-react";
 import "@excalidraw/excalidraw/index.css";
 
@@ -219,6 +220,7 @@ export default function WhiteboardCanvas() {
     },
   ]);
   const [inputMsg, setInputMsg] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Executive Focus Mode (Distraction-free canvas for C-level & managers)
   const [isExecutiveMode, setIsExecutiveMode] = useState(false);
@@ -342,63 +344,111 @@ export default function WhiteboardCanvas() {
         return;
       }
 
-      // Check quota with Next.js Load Balancer Backend
+      setIsGenerating(true);
+
       try {
-        const storedUser = typeof window !== "undefined" ? localStorage.getItem("mindmix_current_user") : null;
-        const parsedUser = storedUser ? JSON.parse(storedUser) : null;
-        const userEmail = parsedUser?.email || "guest@mindmix.app";
-        const userId = parsedUser?.id;
+        // Check quota with Next.js Load Balancer Backend
+        try {
+          const storedUser = typeof window !== "undefined" ? localStorage.getItem("mindmix_current_user") : null;
+          const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+          const userEmail = parsedUser?.email || "guest@mindmix.app";
+          const userId = parsedUser?.id;
 
-        const res = await fetch("/api/execute-command", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            commandType,
-            prompt: `Draw a ${commandType} component`,
-            userEmail,
-            userId,
-          }),
-        });
+          const res = await fetch("/api/execute-command", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              commandType,
+              prompt: `Draw a ${commandType} component`,
+              userEmail,
+              userId,
+            }),
+          });
 
-        if (res.status === 403) {
-          const errData = await res.json();
-          if (errData.code === "UPGRADE_REQUIRED") {
-            setPricingModalReason(
-              `You have reached your daily limit of ${errData.action_limit || 15} AI actions.`
+          if (res.status === 403) {
+            const errData = await res.json();
+            if (errData.code === "UPGRADE_REQUIRED") {
+              setPricingModalReason(
+                `You have reached your daily limit of ${errData.action_limit || 15} AI actions.`
+              );
+              setShowPricingModal(true);
+              setChatMessages((prev) => [
+                ...prev,
+                {
+                  sender: "ai",
+                  text: `⚠️ Daily AI quota reached (${errData.actions_used}/${errData.action_limit}). Upgrade to PRATHOMIX PRO to continue generating unlimited components.`,
+                },
+              ]);
+              return;
+            }
+          }
+
+          const data = await res.json();
+          if (data?.usage) {
+            setAiUsage(data.usage);
+          }
+        } catch (quotaErr) {
+          console.warn("Quota validation fallback:", quotaErr);
+        }
+
+        const appState = api.getAppState ? api.getAppState() : {};
+        const zoom = appState?.zoom?.value || 1;
+        const scrollX = appState?.scrollX || 0;
+        const scrollY = appState?.scrollY || 0;
+
+        // Compute canvas coordinates to place shape near center of screen
+        const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1200;
+        const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 800;
+        let centerX = -scrollX + viewportWidth / (2 * zoom) - 90;
+        let centerY = -scrollY + viewportHeight / (2 * zoom) - 70;
+
+        const baseId = `${commandType}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        const existingElements = api.getSceneElements ? api.getSceneElements() : [];
+        const activeExisting = existingElements.filter((el: any) => !el.isDeleted);
+
+        // Prevent canvas clutter: mathematically offset new elements based on existing canvas bounding box
+        const isLargeTemplate = ["kanban", "swot", "sysarch", "agenda", "userjourney"].includes(commandType);
+
+        if (activeExisting.length > 0) {
+          let maxCanvasX = -Infinity;
+          let minCanvasY = Infinity;
+
+          for (const el of activeExisting) {
+            const elRight = (el.x || 0) + (el.width || 0);
+            const elTop = el.y || 0;
+            if (elRight > maxCanvasX) maxCanvasX = elRight;
+            if (elTop < minCanvasY) minCanvasY = elTop;
+          }
+
+          // Check if default center position collides with existing elements
+          const isOverlapping = activeExisting.some((el: any) => {
+            const elX = el.x || 0;
+            const elY = el.y || 0;
+            const elW = el.width || 0;
+            const elH = el.height || 0;
+            return (
+              centerX < elX + elW + 50 &&
+              centerX + 250 > elX - 50 &&
+              centerY < elY + elH + 50 &&
+              centerY + 200 > elY - 50
             );
-            setShowPricingModal(true);
-            setChatMessages((prev) => [
-              ...prev,
-              {
-                sender: "ai",
-                text: `⚠️ Daily AI quota reached (${errData.actions_used}/${errData.action_limit}). Upgrade to PRATHOMIX PRO to continue generating unlimited components.`,
-              },
-            ]);
-            return;
+          });
+
+          if ((isOverlapping || isLargeTemplate) && isFinite(maxCanvasX)) {
+            if (isLargeTemplate) {
+              // Offset large templates cleanly to the right of existing elements
+              const templateWidthOffset =
+                commandType === "kanban" ? 330 : commandType === "sysarch" ? 360 : 220;
+              centerX = maxCanvasX + 100 + templateWidthOffset;
+              if (isFinite(minCanvasY)) {
+                centerY = Math.max(minCanvasY + 140, centerY);
+              }
+            } else {
+              // Offset individual shapes cascade-style to avoid stacking directly on top
+              centerX = maxCanvasX + 60;
+            }
           }
         }
-
-        const data = await res.json();
-        if (data?.usage) {
-          setAiUsage(data.usage);
-        }
-      } catch (quotaErr) {
-        console.warn("Quota validation fallback:", quotaErr);
-      }
-
-      const appState = api.getAppState ? api.getAppState() : {};
-      const zoom = appState?.zoom?.value || 1;
-      const scrollX = appState?.scrollX || 0;
-      const scrollY = appState?.scrollY || 0;
-
-      // Compute canvas coordinates to place shape near center of screen
-      const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1200;
-      const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 800;
-      const centerX = -scrollX + viewportWidth / (2 * zoom) - 90;
-      const centerY = -scrollY + viewportHeight / (2 * zoom) - 70;
-
-      const baseId = `${commandType}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-      const existingElements = api.getSceneElements ? api.getSceneElements() : [];
 
       const createRect = (opts: {
         id: string;
@@ -1337,14 +1387,19 @@ export default function WhiteboardCanvas() {
           { sender: "ai", text: `✨ ${labelMsg}` },
         ]);
       }
-    },
-    [excalidrawAPI]
-  );
+    } catch (err: any) {
+      console.error("Execute command error:", err);
+    } finally {
+      setIsGenerating(false);
+    }
+  },
+  [excalidrawAPI]
+);
 
   const handleSendChat = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const query = inputMsg.trim();
-    if (!query) return;
+    if (!query || isGenerating) return;
 
     setChatMessages((prev) => [...prev, { sender: "user", text: query }]);
     setInputMsg("");
@@ -1364,6 +1419,7 @@ export default function WhiteboardCanvas() {
         ]);
       }
     } else {
+      setIsGenerating(true);
       // Call Next.js Load Balancer API Route for custom user prompts
       (async () => {
         try {
@@ -1409,8 +1465,30 @@ export default function WhiteboardCanvas() {
             const api = excalidrawAPI || excalidrawAPIRef.current;
             if (api) {
               const existing = api.getSceneElements ? api.getSceneElements() : [];
+              const activeExisting = existing.filter((el: any) => !el.isDeleted);
+              
+              let finalElements = data.elements;
+              if (activeExisting.length > 0) {
+                let maxCanvasX = -Infinity;
+                for (const el of activeExisting) {
+                  const elRight = (el.x || 0) + (el.width || 0);
+                  if (elRight > maxCanvasX) maxCanvasX = elRight;
+                }
+                let minNewX = Infinity;
+                for (const el of data.elements) {
+                  if (typeof el.x === "number" && el.x < minNewX) minNewX = el.x;
+                }
+                if (isFinite(maxCanvasX) && isFinite(minNewX) && minNewX <= maxCanvasX + 40) {
+                  const shiftX = maxCanvasX + 80 - minNewX;
+                  finalElements = data.elements.map((el: any) => ({
+                    ...el,
+                    x: typeof el.x === "number" ? el.x + shiftX : el.x,
+                  }));
+                }
+              }
+
               api.updateScene({
-                elements: [...existing, ...data.elements],
+                elements: [...existing, ...finalElements],
                 commitToHistory: true,
               });
               setChatMessages((prev) => [
@@ -1431,6 +1509,8 @@ export default function WhiteboardCanvas() {
               text: `Processed "${query}". You can also click Quick Commands below.`,
             },
           ]);
+        } finally {
+          setIsGenerating(false);
         }
       })();
     }
@@ -1740,12 +1820,24 @@ export default function WhiteboardCanvas() {
   );
 
   // ───────────────────────────────────────────────────────────────────────────
-  // Python Code-on-Board: Insert Output to Canvas
+  // Multi-Language Code Studio: Insert Output to Canvas
   // ───────────────────────────────────────────────────────────────────────────
   const handleInsertCodeOutput = useCallback(
-    async (content: string, isError: boolean) => {
+    async (executionResult: string, isError: boolean, selectedLanguage: string = "python") => {
       const api = excalidrawAPIRef.current;
       if (!api) return;
+
+      // Clean up any duplicate prefixes if already present in executionResult
+      const cleanedResult = executionResult
+        .replace(/^(?:[^\w\s]*\s*)?[A-Za-z0-9#+]+\s*Output:\s*/i, "")
+        .trim();
+
+      // Dynamic language output title (e.g., 'c' -> "C Output:", 'javascript' -> "Javascript Output:")
+      const langTitle = selectedLanguage
+        ? selectedLanguage.charAt(0).toUpperCase() + selectedLanguage.slice(1)
+        : "Code";
+
+      const outputText = `${langTitle} Output:\n\n${cleanedResult.slice(0, 600)}`;
 
       const { convertToExcalidrawElements } = await import("@excalidraw/excalidraw");
       const appState = api.getAppState();
@@ -1764,7 +1856,7 @@ export default function WhiteboardCanvas() {
           fillStyle: "solid",
           roundness: { type: 3 },
           label: {
-            text: `🐍 Python Output:\n\n${content.slice(0, 480)}`,
+            text: outputText,
             fontSize: 14,
             strokeColor: "#f8fafc",
           },
@@ -2091,9 +2183,49 @@ export default function WhiteboardCanvas() {
   } = useVoiceControl(voiceEvents);
 
   return (
-    <div className="h-screen w-full relative overflow-hidden bg-[#06070a]">
-      {/* ── 1. Excalidraw Component (Strict Dark Mode, Default Drawing Toolbar Visible) ── */}
-      <div className="w-full h-full relative z-0">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#050505]">
+      {/* ── 1. Custom Left Navigation Sidebar (Strict flex-shrink-0, no canvas overlap) ── */}
+      {!isPresentMode && (
+        <LeftSidebar
+          boardTitle={boardTitle}
+          onBoardTitleChange={setBoardTitle}
+          onPresentClick={() =>
+            handleProClick("Laser Presentation Mode", () => setIsPresentMode(true))
+          }
+          onSearchClick={() =>
+            handleProClick("Board Brain Vector Search", () => setSearchOpen(true))
+          }
+          onBoardBrainClick={() =>
+            handleProClick("AI Meeting Summaries & Action Items", () => handleSummarise())
+          }
+          onShareClick={() =>
+            handleProClick("Live Multiplayer Collaboration", () => setIsShareOpen(true))
+          }
+          onCodeStudioClick={() => setIsCodeWidgetOpen((prev) => !prev)}
+          isCodeOpen={isCodeWidgetOpen}
+          onVoiceClick={toggleListening}
+          isVoiceListening={isListening}
+          onToggleExplorer={() => setIsExplorerOpen((prev) => !prev)}
+          isExplorerOpen={isExplorerOpen}
+          onTakeScreenshot={handleTakeScreenshot}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onOpenProModal={() => {
+            setPricingModalReason("Upgrade to access Enterprise AI, 250 daily actions, and 4K exports.");
+            setShowPricingModal(true);
+          }}
+          isSummarising={isLoading}
+          isProUser={isProUser}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+          isExecutiveMode={isExecutiveMode}
+          onToggleExecutiveMode={() => setIsExecutiveMode((prev) => !prev)}
+          onSelectPenTool={handleSelectPenTool}
+          onAddStickyNote={() => executeCommand("stickynote")}
+        />
+      )}
+
+      {/* ── 2. Excalidraw Canvas Wrapper (Flex-1 remaining space) ── */}
+      <div className="flex-1 relative h-full w-full overflow-hidden">
         <Excalidraw
           excalidrawAPI={(api) => {
             excalidrawAPIRef.current = api;
@@ -2112,89 +2244,45 @@ export default function WhiteboardCanvas() {
             },
           }}
         />
-      </div>
 
-      {/* ── 2. Custom UI Overlays (pointer-events-none absolute inset-0 z-50) ── */}
-      {/* Clicks pass freely through empty areas directly to the Excalidraw canvas */}
-      <div className="pointer-events-none absolute inset-0 z-50 overflow-hidden">
-        {/* ── Enterprise Live Transcription HUD (Top-Center) ── */}
-        <AnimatePresence>
-          {isListening && (
-            <motion.div
-              initial={{ opacity: 0, y: -20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              className="pointer-events-auto fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-black/75 backdrop-blur-xl border border-cyan-500/40 shadow-[0_0_30px_rgba(0,245,255,0.25)] select-none max-w-xl"
-            >
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-neon-cyan"></span>
-                </span>
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-cyan-400 bg-cyan-500/15 px-1.5 py-0.5 rounded border border-cyan-500/30">
-                  Live Meeting Sync
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1.5 text-xs text-zinc-200 font-sans truncate">
-                <span className="text-zinc-400 font-medium">Enterprise AI:</span>
-                <span className="text-white font-medium italic animate-pulse">
-                  &ldquo;{liveTranscript || corporateTranscript}&rdquo;
-                </span>
-              </div>
-
-              <button
-                onClick={toggleListening}
-                className="shrink-0 text-[10px] text-zinc-400 hover:text-white px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-colors cursor-pointer"
-                title="Mute Live Transcription"
+        {/* ── Custom UI Overlays inside Canvas Area (pointer-events-none absolute inset-0 z-40) ── */}
+        <div className="pointer-events-none absolute inset-0 z-40 overflow-hidden">
+          {/* ── Enterprise Live Transcription HUD (Top-Center) ── */}
+          <AnimatePresence>
+            {isListening && (
+              <motion.div
+                initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                className="pointer-events-auto select-none absolute top-16 left-1/2 transform -translate-x-1/2 z-50 w-[90%] max-w-2xl lg:max-w-3xl flex items-start gap-3 bg-[#0a0a0a]/90 backdrop-blur-md border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.15)] rounded-xl p-3"
               >
-                Mute
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-neon-cyan"></span>
+                  </span>
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-cyan-400 bg-cyan-500/15 px-1.5 py-0.5 rounded border border-cyan-500/30">
+                    Live Meeting Sync
+                  </span>
+                </div>
 
-        {/* ── Left Vertical Sidebar (Fixed left-0, w-16 or w-64, core & secondary tools) ── */}
-        {!isPresentMode && (
-          <div className="pointer-events-auto">
-            <LeftSidebar
-              boardTitle={boardTitle}
-              onBoardTitleChange={setBoardTitle}
-              onPresentClick={() =>
-                handleProClick("Laser Presentation Mode", () => setIsPresentMode(true))
-              }
-              onSearchClick={() =>
-                handleProClick("Board Brain Vector Search", () => setSearchOpen(true))
-              }
-              onBoardBrainClick={() =>
-                handleProClick("AI Meeting Summaries & Action Items", () => handleSummarise())
-              }
-              onShareClick={() =>
-                handleProClick("Live Multiplayer Collaboration", () => setIsShareOpen(true))
-              }
-              onCodeStudioClick={() => setIsCodeWidgetOpen((prev) => !prev)}
-              isCodeOpen={isCodeWidgetOpen}
-              onVoiceClick={toggleListening}
-              isVoiceListening={isListening}
-              onToggleExplorer={() => setIsExplorerOpen((prev) => !prev)}
-              isExplorerOpen={isExplorerOpen}
-              onTakeScreenshot={handleTakeScreenshot}
-              onOpenSettings={() => setIsSettingsOpen(true)}
-              onOpenProModal={() => {
-                setPricingModalReason("Upgrade to access Enterprise AI, 250 daily actions, and 4K exports.");
-                setShowPricingModal(true);
-              }}
-              isSummarising={isLoading}
-              isProUser={isProUser}
-              isCollapsed={isSidebarCollapsed}
-              onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
-              isExecutiveMode={isExecutiveMode}
-              onToggleExecutiveMode={() => setIsExecutiveMode((prev) => !prev)}
-              onSelectPenTool={handleSelectPenTool}
-              onAddStickyNote={() => executeCommand("stickynote")}
-            />
-          </div>
-        )}
+                <div className="flex-1 whitespace-normal break-words leading-relaxed text-sm text-zinc-200 font-sans">
+                  <span className="text-zinc-400 font-medium mr-1.5">Enterprise AI:</span>
+                  <span className="text-white font-medium italic">
+                    &ldquo;{liveTranscript || corporateTranscript || "Listening..."}&rdquo;
+                  </span>
+                </div>
+
+                <button
+                  onClick={toggleListening}
+                  className="shrink-0 text-[10px] text-zinc-400 hover:text-white px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-colors cursor-pointer mt-0.5"
+                  title="Mute Live Transcription"
+                >
+                  Mute
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
         {/* VS Code-Style Left Explorer Panel Drawer (Suppressed in Executive Focus Mode) */}
         {!isPresentMode && !isExecutiveMode && (
@@ -2383,8 +2471,20 @@ export default function WhiteboardCanvas() {
                       </span>
                     </div>
 
+                    {/* Glowing "Generating AI Shapes..." Spinner Loader */}
+                    {isGenerating && (
+                      <div className="flex items-center justify-center gap-2.5 py-2.5 px-3 rounded-xl bg-neon-cyan/10 border border-neon-cyan/40 text-cyan-300 text-xs font-medium animate-pulse shadow-[0_0_16px_rgba(0,245,255,0.25)]">
+                        <Loader2 className="w-4 h-4 animate-spin text-neon-cyan shrink-0" />
+                        <span className="tracking-wide">Generating AI Shapes...</span>
+                      </div>
+                    )}
+
                     {/* Scrollable Palette Container */}
-                    <div className="overflow-y-auto max-h-48 custom-scrollbar space-y-3 pr-1 text-xs">
+                    <div
+                      className={`overflow-y-auto max-h-48 custom-scrollbar space-y-3 pr-1 text-xs transition-opacity duration-200 ${
+                        isGenerating ? "pointer-events-none opacity-60" : ""
+                      }`}
+                    >
                       {/* 1. Favorites Section (only renders if there are favorited commands) */}
                       {favorites.length > 0 && (
                         <div className="space-y-1.5">
@@ -2394,10 +2494,16 @@ export default function WhiteboardCanvas() {
                           </div>
                           <div className="space-y-1">
                             {QUICK_COMMANDS.filter((cmd) => favorites.includes(cmd.id)).map((cmd) => (
-                              <div
+                              <button
                                 key={`fav-${cmd.id}`}
-                                onClick={() => executeCommand(cmd.actionType)}
-                                className="flex flex-row items-center justify-between bg-white/5 hover:bg-white/10 rounded-lg p-2 transition-all cursor-pointer border border-white/5 hover:border-white/15 group"
+                                type="button"
+                                disabled={isGenerating}
+                                onClick={() => !isGenerating && executeCommand(cmd.actionType)}
+                                className={`w-full flex flex-row items-center justify-between rounded-lg p-2 transition-all border ${
+                                  isGenerating
+                                    ? "bg-white/5 opacity-50 cursor-not-allowed border-white/5"
+                                    : "bg-white/5 hover:bg-white/10 cursor-pointer border-white/5 hover:border-white/15 group"
+                                }`}
                               >
                                 <div className="flex items-center gap-2 text-xs font-medium text-zinc-200 group-hover:text-white transition-colors">
                                   <span className="p-1 rounded-md bg-white/5 border border-white/5">
@@ -2405,16 +2511,18 @@ export default function WhiteboardCanvas() {
                                   </span>
                                   <span>{cmd.label}</span>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={(e) => toggleFavorite(cmd.id, e)}
-                                  className="p-1 rounded-md hover:bg-white/10 text-zinc-400 transition-colors"
+                                <span
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (!isGenerating) toggleFavorite(cmd.id, e);
+                                  }}
+                                  className="p-1 rounded-md hover:bg-white/10 text-zinc-400 transition-colors cursor-pointer"
                                   title="Remove from Favorites"
                                   aria-label="Remove from Favorites"
                                 >
                                   <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                                </button>
-                              </div>
+                                </span>
+                              </button>
                             ))}
                           </div>
                         </div>
@@ -2429,10 +2537,16 @@ export default function WhiteboardCanvas() {
                           {QUICK_COMMANDS.map((cmd) => {
                             const isFav = favorites.includes(cmd.id);
                             return (
-                              <div
+                              <button
                                 key={cmd.id}
-                                onClick={() => executeCommand(cmd.actionType)}
-                                className="flex flex-row items-center justify-between bg-white/5 hover:bg-white/10 rounded-lg p-2 transition-all cursor-pointer border border-white/5 hover:border-white/15 group"
+                                type="button"
+                                disabled={isGenerating}
+                                onClick={() => !isGenerating && executeCommand(cmd.actionType)}
+                                className={`w-full flex flex-row items-center justify-between rounded-lg p-2 transition-all border ${
+                                  isGenerating
+                                    ? "bg-white/5 opacity-50 cursor-not-allowed border-white/5"
+                                    : "bg-white/5 hover:bg-white/10 cursor-pointer border-white/5 hover:border-white/15 group"
+                                }`}
                               >
                                 <div className="flex items-center gap-2 text-xs font-medium text-zinc-200 group-hover:text-white transition-colors">
                                   <span className="p-1 rounded-md bg-white/5 border border-white/5">
@@ -2440,10 +2554,12 @@ export default function WhiteboardCanvas() {
                                   </span>
                                   <span>{cmd.label}</span>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={(e) => toggleFavorite(cmd.id, e)}
-                                  className="p-1 rounded-md hover:bg-white/10 text-zinc-400 transition-colors"
+                                <span
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (!isGenerating) toggleFavorite(cmd.id, e);
+                                  }}
+                                  className="p-1 rounded-md hover:bg-white/10 text-zinc-400 transition-colors cursor-pointer"
                                   title={isFav ? "Remove from Favorites" : "Add to Favorites"}
                                   aria-label={isFav ? "Remove from Favorites" : "Add to Favorites"}
                                 >
@@ -2454,8 +2570,8 @@ export default function WhiteboardCanvas() {
                                         : "text-zinc-500 hover:text-amber-300"
                                     }`}
                                   />
-                                </button>
-                              </div>
+                                </span>
+                              </button>
                             );
                           })}
                         </div>
@@ -2468,16 +2584,21 @@ export default function WhiteboardCanvas() {
                     <input
                       type="text"
                       value={inputMsg}
+                      disabled={isGenerating}
                       onChange={(e) => setInputMsg(e.target.value)}
-                      placeholder="Ask AI or 'draw rectangle'..."
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-3 pr-9 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-neon-cyan/50 focus:bg-white/10 transition-colors"
+                      placeholder={isGenerating ? "Generating AI shapes..." : "Ask AI or 'draw rectangle'..."}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-3 pr-9 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-neon-cyan/50 focus:bg-white/10 transition-colors disabled:opacity-50"
                     />
                     <button
                       type="submit"
                       className="absolute right-2 p-1.5 text-zinc-400 hover:text-neon-cyan disabled:opacity-40 transition-colors"
-                      disabled={!inputMsg.trim()}
+                      disabled={isGenerating || !inputMsg.trim()}
                     >
-                      <Send className="w-3.5 h-3.5" />
+                      {isGenerating ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-neon-cyan" />
+                      ) : (
+                        <Send className="w-3.5 h-3.5" />
+                      )}
                     </button>
                   </form>
                 </motion.div>
@@ -2487,5 +2608,6 @@ export default function WhiteboardCanvas() {
         )}
       </div>
     </div>
+  </div>
   );
 }

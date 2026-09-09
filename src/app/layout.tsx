@@ -25,6 +25,11 @@ export const metadata: Metadata = {
     type: "website",
     url: "https://prathomix.tech",
   },
+  icons: {
+    icon: "/mindmix-logo-v2.png",
+    shortcut: "/mindmix-logo-v2.png",
+    apple: "/mindmix-logo-v2.png",
+  },
 };
 
 export default function RootLayout({

@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Tv,
   Search,
@@ -84,8 +85,8 @@ export function LeftSidebar({
 
   return (
     <aside
-      className={`fixed left-0 top-0 h-screen z-50 flex flex-col overflow-y-auto custom-scrollbar bg-black/40 backdrop-blur-md border-r border-white/10 select-none transition-all duration-300 ${
-        isCollapsed ? "w-16 p-2 gap-3" : "w-64 p-4 gap-4"
+      className={`h-full flex-shrink-0 relative z-50 flex flex-col overflow-y-auto custom-scrollbar bg-black/40 backdrop-blur-md border-r border-white/10 select-none transition-all duration-300 ${
+        isCollapsed ? "w-[72px] p-2 gap-3" : "w-64 p-4 gap-4"
       }`}
     >
       {/* ── 1. Header: Logo & Collapse Button ── */}
@@ -101,15 +102,15 @@ export function LeftSidebar({
               className="flex items-center gap-2.5 group hover:opacity-90 transition-opacity"
               title="MindMix Whiteboard OS"
             >
-              {/* Glowing Spark Icon */}
-              <svg
-                className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.85)] group-hover:rotate-12 transition-transform duration-300 shrink-0"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
-              </svg>
+              <div className="w-8 h-8 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 duration-300">
+                <Image
+                  src="/mindmix-logo-v2.png"
+                  alt="MindMix Logo"
+                  width={32}
+                  height={32}
+                  className="w-full h-full object-contain drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]"
+                />
+              </div>
               <span className="font-bold text-white tracking-tight font-sans text-base">
                 MindMix
               </span>
@@ -129,17 +130,18 @@ export function LeftSidebar({
           <div className="flex flex-col items-center gap-2">
             <Link
               href="/"
-              className="p-1 rounded-xl text-cyan-400 hover:bg-white/5 transition-colors"
+              className="p-1 rounded-xl hover:bg-white/5 transition-colors group"
               title="MindMix Whiteboard OS"
             >
-              <svg
-                className="w-5 h-5 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.85)]"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
-              </svg>
+              <div className="w-8 h-8 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 duration-300">
+                <Image
+                  src="/mindmix-logo-v2.png"
+                  alt="MindMix Logo"
+                  width={32}
+                  height={32}
+                  className="w-full h-full object-contain drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]"
+                />
+              </div>
             </Link>
             <button
               type="button"

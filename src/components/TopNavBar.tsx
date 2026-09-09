@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tv, Search, Brain, Share2, Code2, Bot } from "lucide-react";
 
@@ -60,15 +61,15 @@ export function TopNavBar({
           className="flex items-center gap-2 group transition-opacity hover:opacity-90"
           title="MindMix Whiteboard OS"
         >
-          {/* Subtle glowing SVG spark icon */}
-          <svg
-            className="w-4 h-4 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.85)] group-hover:rotate-12 transition-transform duration-300"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
-          </svg>
+          <div className="w-7 h-7 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
+            <Image
+              src="/mindmix-logo-v2.png"
+              alt="MindMix Logo"
+              width={28}
+              height={28}
+              className="w-full h-full object-contain drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]"
+            />
+          </div>
           <span className="font-semibold text-white tracking-tight text-sm sm:text-base font-sans">
             MindMix
           </span>
