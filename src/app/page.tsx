@@ -285,7 +285,7 @@ export default function LandingPage() {
           5. PRICING SECTION ("Simple Plans for Every Stage")
           ═════════════════════════════════════════════════════════════════ */}
       {/* ── 5. PRICING SECTION (FRAMER MOTION MASTERPIECE) ──────────── */}
-      <PricingSection />
+      <PricingSection onOpenAuth={() => setAuthModalOpen(true)} />
 
       {/* ═════════════════════════════════════════════════════════════════
           6. FOOTER

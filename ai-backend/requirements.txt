@@ -2,14 +2,14 @@
 # Install with: pip install -r requirements.txt
 
 # Web framework
-fastapi==0.115.6
-uvicorn[standard]==0.32.1
+fastapi
+uvicorn[standard]
 
 # HTTP client (async) -- used for HF API + Supabase REST calls
-httpx==0.28.1
+httpx
 
 # Data validation
-pydantic==2.10.4
+pydantic
 
 # Environment variables
-python-dotenv==1.0.1
+python-dotenv

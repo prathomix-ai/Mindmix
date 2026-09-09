@@ -1,17 +1,31 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ArrowRight, Zap, Crown, Sparkles, Lock, Loader2 } from "lucide-react";
+import {
+  Check,
+  ArrowRight,
+  Zap,
+  Crown,
+  Sparkles,
+  Lock,
+  Loader2,
+  ShieldCheck,
+  AlertCircle,
+  LogIn,
+} from "lucide-react";
 import { ProBadge } from "@/components/ProBadge";
+import { createClient } from "@/lib/supabase/client";
 
 interface ProPricingCardProps {
   onUpgradeClick?: () => void;
+  onOpenAuth?: () => void;
   ctaHref?: string;
   className?: string;
 }
 
-// Dynamically load the standard Razorpay checkout script
+// Dynamically load Razorpay standard checkout script if not already on page
 const loadRazorpayScript = (): Promise<boolean> => {
   return new Promise((resolve) => {
     if (typeof window === "undefined") return resolve(false);
@@ -28,16 +42,28 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
 export function ProPricingCard({
   onUpgradeClick,
+  onOpenAuth,
   className = "",
 }: ProPricingCardProps) {
-  // 1. Billing toggle state
+  const router = useRouter();
+
+  // 1. State management
   const [isYearly, setIsYearly] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [paymentSuccess, setPaymentSuccess] = useState<string | null>(null);
 
-  // 2. Final Pricing Configuration ($5/mo and $49/yr)
+  // 2. Pricing Configuration ($5/mo and $49/yr)
   const monthlyPrice = 5;
   const yearlyPrice = 49;
   const effectiveMonthly = "4.08";
+
+  // Auto-dismiss toast notification after 4 seconds
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = setTimeout(() => setToastMessage(null), 4000);
+    return () => clearTimeout(timer);
+  }, [toastMessage]);
 
   const features = [
     { text: "Everything in Starter (Forever Free)", isHighlight: true },
@@ -50,11 +76,65 @@ export function ProPricingCard({
     { text: "Unlimited Infinite Canvases & Cloud Backup", hasProBadge: true },
   ];
 
-  // 3. Razorpay Payment Handler
+  // 3. Helper: Check if user is logged in
+  const checkUserAuthentication = async (): Promise<boolean> => {
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user && user.id) return true;
+
+      // Check local storage for mock/persisted login in dev
+      const localUser =
+        typeof window !== "undefined"
+          ? localStorage.getItem("mindmix_current_user")
+          : null;
+      if (localUser) {
+        const parsed = JSON.parse(localUser);
+        if (parsed && parsed.email) return true;
+      }
+
+      return false;
+    } catch {
+      const localUser =
+        typeof window !== "undefined"
+          ? localStorage.getItem("mindmix_current_user")
+          : null;
+      return !!(localUser && JSON.parse(localUser)?.email);
+    }
+  };
+
+  // 4. Razorpay Standard Checkout Flow with Auth Enforcement & Subunit Calculations
   const handleRazorpayPayment = async () => {
     try {
+      setToastMessage(null);
+
+      // ── STEP 1: ENFORCE LOGIN BEFORE PAYMENT ───────────────────────────────
+      const isAuthenticated = await checkUserAuthentication();
+
+      if (!isAuthenticated) {
+        // Block Razorpay popup completely
+        setToastMessage("Please login to upgrade");
+
+        // Trigger the auth modal if prop provided or via custom window event
+        if (onOpenAuth) {
+          onOpenAuth();
+        } else if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("open-auth-modal"));
+          // Or redirect to login route if no modal listeners
+          setTimeout(() => {
+            router.push("/login");
+          }, 800);
+        }
+        return;
+      }
+
+      // User is authenticated, proceed to checkout
       setIsLoading(true);
 
+      // Ensure Razorpay SDK script is loaded
       const scriptLoaded = await loadRazorpayScript();
       if (!scriptLoaded) {
         alert("Razorpay checkout failed to load. Please verify your internet connection.");
@@ -62,74 +142,162 @@ export function ProPricingCard({
         return;
       }
 
-      // Call backend route to generate order ID
+      // ── STEP 2: SUBUNIT AMOUNT CALCULATION (* 100) ─────────────────────────
+      // USD Billing: $5 * 100 = 500 cents (monthly), $49 * 100 = 4900 cents (yearly)
+      const baseDollars = isYearly ? yearlyPrice : monthlyPrice;
+      const currency = "USD";
+      const amountInSubunits = baseDollars * 100;
+
+      // STEP 3: Call backend to create Razorpay Order
       const res = await fetch("/api/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           plan: isYearly ? "yearly" : "monthly",
-          amount: isYearly ? yearlyPrice : monthlyPrice,
-          currency: "USD",
+          amount: amountInSubunits, // exact subunit amount (* 100)
+          currency,
         }),
       });
 
       if (!res.ok) {
-        throw new Error("Unable to create payment order. Please try again.");
+        const errData = await res.json().catch(() => ({}));
+
+        // Fallback to INR if Razorpay account has international currencies disabled
+        if (errData.code === "CURRENCY_NOT_SUPPORTED") {
+          const inrPrice = isYearly ? 4100 : 420; // $49 ≈ ₹4100, $5 ≈ ₹420
+          const inrSubunits = inrPrice * 100;
+
+          const fallbackRes = await fetch("/api/create-order", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              plan: isYearly ? "yearly" : "monthly",
+              amount: inrSubunits,
+              currency: "INR",
+            }),
+          });
+
+          if (!fallbackRes.ok) {
+            throw new Error("Unable to create order. Please check Razorpay keys.");
+          }
+
+          const fallbackOrderData = await fallbackRes.json();
+          openRazorpayModal(fallbackOrderData);
+          return;
+        }
+
+        throw new Error(errData.error || "Unable to create payment order. Please try again.");
       }
 
       const orderData = await res.json();
-
-      const options = {
-        key:
-          orderData.key_id ||
-          process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
-          "rzp_test_placeholder",
-        amount: orderData.amount,
-        currency: orderData.currency || "USD",
-        name: "PRATHOMIX MindMix Pro",
-        description: isYearly
-          ? `MindMix Pro Yearly Membership ($${yearlyPrice}/year)`
-          : `MindMix Pro Monthly Membership ($${monthlyPrice}/month)`,
-        order_id: orderData.id,
-        theme: {
-          color: "#00f5ff",
-        },
-        handler: function (response: any) {
-          alert(`Payment Successful! Payment ID: ${response.razorpay_payment_id}`);
-
-          // Activate local Pro status
-          try {
-            const currentUser = localStorage.getItem("mindmix_current_user");
-            if (currentUser) {
-              const parsed = JSON.parse(currentUser);
-              parsed.role = "pro";
-              localStorage.setItem("mindmix_current_user", JSON.stringify(parsed));
-            }
-          } catch (e) {
-            console.error("Failed to store pro role:", e);
-          }
-
-          if (onUpgradeClick) onUpgradeClick();
-        },
-        prefill: {
-          name: "MindMix Creator",
-          email: "creator@mindmix.ai",
-        },
-        modal: {
-          ondismiss: function () {
-            console.log("Razorpay checkout popup closed by user.");
-          },
-        },
-      };
-
-      const rzpInstance = new (window as any).Razorpay(options);
-      rzpInstance.open();
+      openRazorpayModal(orderData);
     } catch (error: any) {
       console.error("Razorpay payment error:", error);
       alert(error?.message || "Failed to initiate payment. Please try again.");
-    } finally {
       setIsLoading(false);
     }
+  };
+
+  // 5. Open Razorpay Modal & Verify Signature on Success
+  const openRazorpayModal = (orderData: {
+    order_id: string;
+    amount: number;
+    currency: string;
+    key_id: string;
+  }) => {
+    const options = {
+      key:
+        process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
+        orderData.key_id ||
+        "rzp_test_Ta2kWl9IX7CgkT",
+      amount: orderData.amount, // in subunits (* 100)
+      currency: orderData.currency || "USD",
+      name: "PRATHOMIX MindMix Pro",
+      description: isYearly
+        ? `MindMix Pro Yearly Membership ($${yearlyPrice}/year)`
+        : `MindMix Pro Monthly Membership ($${monthlyPrice}/month)`,
+      order_id: orderData.order_id,
+      theme: {
+        color: "#00f5ff",
+      },
+      prefill: {
+        name: "MindMix Creator",
+        email: "creator@mindmix.ai",
+        contact: "9999999999",
+      },
+      // Payment Success Callback: verify HMAC-SHA256 signature with backend
+      handler: async function (response: {
+        razorpay_payment_id: string;
+        razorpay_order_id: string;
+        razorpay_signature: string;
+      }) {
+        try {
+          setIsLoading(true);
+
+          const verifyRes = await fetch("/api/verify-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            }),
+          });
+
+          const verifyData = await verifyRes.json();
+
+          if (verifyRes.ok && verifyData.success) {
+            setPaymentSuccess(response.razorpay_payment_id);
+            alert(
+              `🎉 Payment Verified Successfully!\nPayment ID: ${response.razorpay_payment_id}\nWelcome to MindMix PRO!`
+            );
+
+            // Activate local Pro status
+            try {
+              const currentUser = localStorage.getItem("mindmix_current_user");
+              if (currentUser) {
+                const parsed = JSON.parse(currentUser);
+                parsed.role = "pro";
+                localStorage.setItem("mindmix_current_user", JSON.stringify(parsed));
+              }
+            } catch (e) {
+              console.error("Failed to store pro role:", e);
+            }
+
+            if (onUpgradeClick) onUpgradeClick();
+          } else {
+            alert(
+              `❌ Payment Verification Failed: ${
+                verifyData.error || "Signature mismatch. Order not confirmed."
+              }`
+            );
+          }
+        } catch (verifyErr: any) {
+          console.error("Signature verification error:", verifyErr);
+          alert("Error verifying payment signature with server.");
+        } finally {
+          setIsLoading(false);
+        }
+      },
+      modal: {
+        ondismiss: function () {
+          console.log("Razorpay checkout popup closed by user.");
+          setIsLoading(false);
+        },
+      },
+    };
+
+    const rzpInstance = new (window as any).Razorpay(options);
+
+    rzpInstance.on("payment.failed", function (response: any) {
+      console.error("Razorpay Payment Failed:", response.error);
+      alert(
+        `Payment Failed!\nReason: ${response.error.description || "Transaction declined"}`
+      );
+      setIsLoading(false);
+    });
+
+    rzpInstance.open();
   };
 
   return (
@@ -146,6 +314,46 @@ export function ProPricingCard({
       {/* ── Background Ambient Neon Glows ── */}
       <div className="absolute -top-20 -right-20 w-52 h-52 rounded-full bg-cyan-500/15 blur-3xl pointer-events-none group-hover:bg-cyan-500/25 transition-all duration-500" />
       <div className="absolute -bottom-24 -left-24 w-52 h-52 rounded-full bg-blue-600/15 blur-3xl pointer-events-none group-hover:bg-blue-600/25 transition-all duration-500" />
+
+      {/* ── Floating Toast: "Please login to upgrade" ── */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.92 }}
+            transition={{ type: "spring", stiffness: 450, damping: 26 }}
+            className="absolute top-4 left-4 right-4 z-50 p-3 rounded-2xl bg-zinc-950/95 border border-cyan-400 text-white shadow-[0_0_30px_rgba(0,245,255,0.5)] backdrop-blur-2xl flex items-center justify-between gap-3"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0">
+                <AlertCircle className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-mono font-bold text-white leading-tight">
+                  {toastMessage}
+                </p>
+                <p className="text-[10px] font-sans text-zinc-400">
+                  Authentication required for Pro checkout
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setToastMessage(null);
+                if (onOpenAuth) onOpenAuth();
+                else window.dispatchEvent(new CustomEvent("open-auth-modal"));
+              }}
+              className="px-3 py-1.5 rounded-lg bg-cyan-400 text-black font-mono font-bold text-xs hover:bg-cyan-300 transition-all flex items-center gap-1 shrink-0 cursor-pointer"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Login</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Glowing Softly-Pulsing "Most Popular" Badge ── */}
       <motion.div
@@ -194,8 +402,9 @@ export function ProPricingCard({
           <button
             type="button"
             onClick={() => setIsYearly(false)}
-            className={`relative flex-1 py-1.5 px-3 text-xs font-mono font-bold rounded-lg transition-colors duration-200 flex items-center justify-center cursor-pointer ${!isYearly ? "text-black" : "text-zinc-400 hover:text-zinc-200"
-              }`}
+            className={`relative flex-1 py-1.5 px-3 text-xs font-mono font-bold rounded-lg transition-colors duration-200 flex items-center justify-center cursor-pointer ${
+              !isYearly ? "text-black" : "text-zinc-400 hover:text-zinc-200"
+            }`}
           >
             {!isYearly && (
               <motion.div
@@ -211,8 +420,9 @@ export function ProPricingCard({
           <button
             type="button"
             onClick={() => setIsYearly(true)}
-            className={`relative flex-1 py-1.5 px-3 text-xs font-mono font-bold rounded-lg transition-colors duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${isYearly ? "text-black" : "text-zinc-400 hover:text-zinc-200"
-              }`}
+            className={`relative flex-1 py-1.5 px-3 text-xs font-mono font-bold rounded-lg transition-colors duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${
+              isYearly ? "text-black" : "text-zinc-400 hover:text-zinc-200"
+            }`}
           >
             {isYearly && (
               <motion.div
@@ -227,10 +437,11 @@ export function ProPricingCard({
             <motion.span
               animate={isYearly ? { scale: [1, 1.08, 1] } : {}}
               transition={{ repeat: Infinity, duration: 2 }}
-              className={`relative z-10 px-1.5 py-0.5 rounded text-[9px] font-bold tracking-tight uppercase border transition-all ${isYearly
+              className={`relative z-10 px-1.5 py-0.5 rounded text-[9px] font-bold tracking-tight uppercase border transition-all ${
+                isYearly
                   ? "bg-black/90 text-cyan-300 border-cyan-400/50 shadow-[0_0_10px_rgba(0,245,255,0.5)]"
                   : "bg-emerald-500/20 text-emerald-300 border-emerald-400/40 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
-                }`}
+              }`}
             >
               Save 18%
             </motion.span>
@@ -294,7 +505,7 @@ export function ProPricingCard({
               className="flex items-start gap-2.5 text-zinc-200 text-xs"
             >
               <div className="w-4 h-4 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 flex items-center justify-center shrink-0 mt-0.5 shadow-[0_0_8px_rgba(0,245,255,0.2)]">
-                <Check className="w-3 h-3 stroke-[2.5]" />
+                <Check className="w-3.5 h-3.5 stroke-[2.5]" />
               </div>
 
               <div className="flex items-center gap-1.5 flex-wrap leading-snug">
@@ -315,7 +526,7 @@ export function ProPricingCard({
 
         {/* ── Exclusivity / Guarantee Note ── */}
         <div className="flex items-center gap-2 text-[10px] font-mono text-cyan-300 bg-cyan-950/40 border border-cyan-500/30 px-3 py-1.5 rounded-lg shadow-inner">
-          <Lock className="w-3 h-3 text-cyan-400 shrink-0" />
+          <Lock className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
           <span>Instant activation &bull; 14-day money-back guarantee</span>
         </div>
       </div>
@@ -337,7 +548,12 @@ export function ProPricingCard({
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin text-black" />
-                <span>Preparing Checkout...</span>
+                <span>Preparing Order...</span>
+              </>
+            ) : paymentSuccess ? (
+              <>
+                <ShieldCheck className="w-4 h-4 text-black" />
+                <span>PRO Activated!</span>
               </>
             ) : (
               <>

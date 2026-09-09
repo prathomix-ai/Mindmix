@@ -33,7 +33,11 @@ const cardVariants: Variants = {
   },
 };
 
-export function PricingSection() {
+export interface PricingSectionProps {
+  onOpenAuth?: () => void;
+}
+
+export function PricingSection({ onOpenAuth }: PricingSectionProps = {}) {
   const [isSalesModalOpen, setIsSalesModalOpen] = useState(false);
 
   return (
@@ -150,7 +154,7 @@ export function PricingSection() {
           </motion.div>
 
           {/* ── CARD 2: PRO (CYBERPUNK MASTERPIECE WITH MONTHLY/YEARLY TOGGLE) ────── */}
-          <ProPricingCard ctaHref="/canvas" />
+          <ProPricingCard ctaHref="/canvas" onOpenAuth={onOpenAuth} />
 
           {/* ── CARD 3: ENTERPRISE ─────────────────────────────────────── */}
           <motion.div
