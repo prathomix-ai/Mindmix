@@ -1,0 +1,15 @@
+# MindMix AI Backend -- Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# Web framework
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+
+# HTTP client (async) -- used for HF API + Supabase REST calls
+httpx==0.28.1
+
+# Data validation
+pydantic==2.10.4
+
+# Environment variables
+python-dotenv==1.0.1

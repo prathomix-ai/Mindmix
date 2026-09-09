@@ -1,0 +1,218 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+
+interface PresentationModeHUDProps {
+  isActive: boolean;
+  onExit: () => void;
+  editor?: any;
+  excalidrawAPI?: any;
+}
+
+export default function PresentationModeHUD({
+  isActive,
+  onExit,
+  editor,
+  excalidrawAPI,
+}: PresentationModeHUDProps) {
+  const [laserActive, setLaserActive] = useState(true);
+  const [laserPos, setLaserPos] = useState<{ x: number; y: number }>({ x: -100, y: -100 });
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+
+  // Laser Pointer cursor tracker
+  useEffect(() => {
+    if (!isActive || !laserActive) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      setLaserPos({ x: e.clientX, y: e.clientY });
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, [isActive, laserActive]);
+
+  // Fullscreen state listener
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFsChange);
+    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+  }, []);
+
+  // Keyboard shortcut: Esc to exit present mode, Left/Right for slides
+  useEffect(() => {
+    if (!isActive) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onExit();
+      } else if (e.key === "ArrowRight" || e.key === "Space") {
+        handleNextSlide();
+      } else if (e.key === "ArrowLeft") {
+        handlePrevSlide();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isActive, onExit, currentSlideIndex]);
+
+  // Slide navigation by zooming to shapes sequentially
+  const getCanvasShapes = () => {
+    if (excalidrawAPI) {
+      return excalidrawAPI.getSceneElements().filter((el: any) => !el.isDeleted);
+    }
+    if (editor && typeof editor.getCurrentPageShapes === "function") {
+      return Array.from(editor.getCurrentPageShapes());
+    }
+    return [];
+  };
+
+  const handleNextSlide = () => {
+    const shapes = getCanvasShapes();
+    if (shapes.length === 0) return;
+    const nextIdx = (currentSlideIndex + 1) % shapes.length;
+    setCurrentSlideIndex(nextIdx);
+    const targetShape = shapes[nextIdx];
+    if (targetShape) {
+      if (excalidrawAPI) {
+        excalidrawAPI.scrollToContent([targetShape], { fitToViewport: true });
+      } else if (editor) {
+        editor.select(targetShape.id);
+        editor.zoomToSelection({ animation: { duration: 350 } });
+      }
+    }
+  };
+
+  const handlePrevSlide = () => {
+    const shapes = getCanvasShapes();
+    if (shapes.length === 0) return;
+    const prevIdx = (currentSlideIndex - 1 + shapes.length) % shapes.length;
+    setCurrentSlideIndex(prevIdx);
+    const targetShape = shapes[prevIdx];
+    if (targetShape) {
+      if (excalidrawAPI) {
+        excalidrawAPI.scrollToContent([targetShape], { fitToViewport: true });
+      } else if (editor) {
+        editor.select(targetShape.id);
+        editor.zoomToSelection({ animation: { duration: 350 } });
+      }
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    } else {
+      document.exitFullscreen?.().catch(() => {});
+    }
+  };
+
+  if (!isActive) return null;
+
+  const totalShapes = excalidrawAPI
+    ? excalidrawAPI.getSceneElements().filter((el: any) => !el.isDeleted).length
+    : editor && typeof editor.getCurrentPageShapes === "function"
+    ? editor.getCurrentPageShapes().length
+    : 0;
+
+  return (
+    <>
+      {/* ── Glowing Neon Laser Pointer Effect ───────────────────────────── */}
+      {laserActive && (
+        <div
+          className="fixed pointer-events-none z-[9999] transition-transform duration-75 ease-out"
+          style={{
+            left: laserPos.x,
+            top: laserPos.y,
+            transform: "translate(-50%, -50%)",
+          }}
+        >
+          {/* Core Dot */}
+          <div className="w-3 h-3 rounded-full bg-neon-cyan shadow-[0_0_12px_#00f5ff,0_0_24px_#00f5ff]" />
+          {/* Outer Ring */}
+          <div className="absolute inset-[-6px] rounded-full border border-neon-cyan/50 animate-ping" />
+        </div>
+      )}
+
+      {/* ── Distraction-Free Presentation HUD (Bottom Center) ──────────── */}
+      <motion.div
+        initial={{ y: 80, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 80, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 350, damping: 28 }}
+        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-2.5 rounded-full bg-void-dark/85 backdrop-blur-xl border border-neon-cyan/30 shadow-[0_0_30px_rgba(0,245,255,0.25)] text-white select-none"
+      >
+        {/* Presenting Indicator */}
+        <div className="flex items-center gap-2 pr-3 border-r border-white/15">
+          <span className="w-2 h-2 rounded-full bg-neon-cyan animate-pulse" />
+          <span className="text-xs font-mono font-semibold tracking-wider text-neon-cyan uppercase">
+            Present Mode
+          </span>
+        </div>
+
+        {/* Slide Navigation */}
+        <div className="flex items-center gap-1.5 px-2">
+          <button
+            onClick={handlePrevSlide}
+            className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/10 text-zinc-300 hover:text-white transition-all text-xs"
+            title="Previous Frame (Left Arrow)"
+          >
+            ◀
+          </button>
+          <span className="text-xs font-mono text-zinc-400 px-1">
+            {totalShapes > 0 ? `${currentSlideIndex + 1} / ${totalShapes}` : "Free Walk"}
+          </span>
+          <button
+            onClick={handleNextSlide}
+            className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/10 text-zinc-300 hover:text-white transition-all text-xs"
+            title="Next Frame (Right Arrow / Space)"
+          >
+            ▶
+          </button>
+        </div>
+
+        <div className="w-[1px] h-4 bg-white/15" />
+
+        {/* Laser Pointer Toggle */}
+        <button
+          onClick={() => setLaserActive(!laserActive)}
+          className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all ${
+            laserActive
+              ? "bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/40 shadow-[0_0_10px_rgba(0,245,255,0.3)]"
+              : "text-zinc-400 hover:text-white hover:bg-white/10"
+          }`}
+          title="Toggle Presenter Laser Pointer"
+        >
+          <span>🎯</span>
+          <span>Laser</span>
+        </button>
+
+        {/* Fullscreen Toggle */}
+        <button
+          onClick={toggleFullscreen}
+          className="p-1.5 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-all text-xs"
+          title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+        >
+          {isFullscreen ? "🗗" : "⛶"}
+        </button>
+
+        <div className="w-[1px] h-4 bg-white/15" />
+
+        {/* Exit Presentation */}
+        <button
+          onClick={onExit}
+          className="px-3 py-1 rounded-full bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-400 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-[0_0_12px_rgba(239,68,68,0.2)]"
+          title="Exit Present Mode (Esc)"
+        >
+          <span>✕</span>
+          <span>Exit</span>
+          <kbd className="text-[9px] bg-red-950/60 px-1 py-0.5 rounded text-red-300">Esc</kbd>
+        </button>
+      </motion.div>
+    </>
+  );
+}
