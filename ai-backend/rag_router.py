@@ -1,5 +1,5 @@
 """
-MindMix RAG -- Router
+WasmSpace RAG -- Router
 Provides two endpoints:
 
   POST /api/rag/index   -- Embed and store a canvas session in Supabase
@@ -23,7 +23,7 @@ from supabase_client import (
     rpc_hybrid_search_sessions,
 )
 
-logger = logging.getLogger("mindmix-ai.rag")
+logger = logging.getLogger("wasmspace-ai.rag")
 
 router = APIRouter(prefix="/api", tags=["rag"])
 

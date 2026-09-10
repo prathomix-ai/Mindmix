@@ -1,5 +1,5 @@
 -- ─────────────────────────────────────────────────────────────────────────────
--- MindMix SaaS: Admin Panel, Profiles & CMS Site Settings Schema
+-- WasmSpace SaaS: Admin Panel, Profiles & CMS Site Settings Schema
 -- Execute in Supabase SQL Editor: Dashboard > SQL Editor > New Query
 -- ─────────────────────────────────────────────────────────────────────────────
 
@@ -92,7 +92,7 @@ create table if not exists public.site_settings (
   cta_text            text not null default 'Start Your Free Canvas',
   pro_price_monthly   numeric not null default 19,
   pro_price_yearly    numeric not null default 190,
-  announcement_banner text default '⚡ MindMix 2.0 with WebAssembly Python & Excalidraw Engine is Live!',
+  announcement_banner text default '⚡ WasmSpace 2.0 with WebAssembly Python & Excalidraw Engine is Live!',
   updated_at          timestamptz default now(),
   updated_by          uuid references auth.users(id)
 );
@@ -128,7 +128,7 @@ values (
   'Start Your Free Canvas',
   19,
   190,
-  '⚡ MindMix 2.0 with WebAssembly Python & Excalidraw Engine is Live!'
+  '⚡ WasmSpace 2.0 with WebAssembly Python & Excalidraw Engine is Live!'
 )
 on conflict (id) do nothing;
 

@@ -383,7 +383,7 @@ export default function LandingPage() {
               Tailored Workflows
             </h2>
             <h3 className="text-3xl sm:text-4xl md:text-5xl font-extrabold font-mono text-gray-900 dark:text-white tracking-tight">
-              Who Thinks on MindMix?
+              Who Thinks on WasmSpace?
             </h3>
             <p className="text-base text-gray-600 dark:text-gray-400">
               Built for forward-thinking specialists who need speed, clarity, and zero context switching.
@@ -429,14 +429,14 @@ export default function LandingPage() {
               <Link href="/" className="flex items-center gap-2.5 font-mono font-bold text-lg text-gray-900 dark:text-white group">
                 <div className="w-8 h-8 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
                   <Image
-                    src="/mindmix-logo-v2.png"
-                    alt="MindMix Logo"
+                    src="/wasmspace-logo.png"
+                    alt="WasmSpace Logo"
                     width={32}
                     height={32}
                     className="w-full h-full object-contain drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]"
                   />
                 </div>
-                <span>MindMix</span>
+                <span>WasmSpace</span>
               </Link>
               <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 max-w-sm leading-relaxed">
                 The infinite collaborative whiteboard OS for engineers, architects, and designers. Built with Next.js 14, Excalidraw, Pyodide WASM, and Supabase.

@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// MindMix — Code-on-Board (Pyodide WebAssembly Runner) Types
+// WasmSpace — Code-on-Board (Pyodide WebAssembly Runner) Types
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type PyodideStatus =
@@ -65,7 +65,7 @@ export interface ExecutionResult {
 export interface CodeTemplate {
   id: string;
   name: string;
-  category: "Algorithm" | "Math" | "Data" | "MindMix Canvas";
+  category: "Algorithm" | "Math" | "Data" | "WasmSpace Canvas" | "MindMix Canvas";
   description: string;
   code: string;
 }

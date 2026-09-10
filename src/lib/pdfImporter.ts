@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// MindMix — PDF & Document Importer Utility
+// WasmSpace — PDF & Document Importer Utility
 // Renders PDF pages into images in-browser via PDF.js WebAssembly / Canvas
 // ─────────────────────────────────────────────────────────────────────────────
 

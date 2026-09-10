@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       notes: {
         plan,
         base_price: isYearly ? 49 : 5,
-        service: "PRATHOMIX MindMix Pro",
+        service: "PRATHOMIX WasmSpace Pro",
       },
     };
 

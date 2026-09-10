@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// MindMix — Whiteboard Canvas Utilities & Shape Helpers
+// WasmSpace — Whiteboard Canvas Utilities & Shape Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { type Editor, type TLShape } from "@tldraw/tldraw";

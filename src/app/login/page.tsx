@@ -87,15 +87,14 @@ function LoginForm() {
           // Dev / Offline fallback
           if (error.message.includes("fetch") || error.message.includes("placeholder")) {
             const role = email.toLowerCase().includes("admin") ? "admin" : "user";
-            localStorage.setItem(
-              "mindmix_current_user",
-              JSON.stringify({
-                email,
-                name: fullName,
-                phone: phoneNumber,
-                role,
-              })
-            );
+            const sessionData = JSON.stringify({
+              email,
+              name: fullName,
+              phone: phoneNumber,
+              role,
+            });
+            localStorage.setItem("wasmspace_current_user", sessionData);
+            localStorage.setItem("mindmix_current_user", sessionData);
             setSuccessMsg("Account created! Redirecting to pricing...");
             setTimeout(() => router.push("/#pricing"), 1000);
             return;
@@ -115,10 +114,9 @@ function LoginForm() {
         if (error) {
           if (error.message.includes("fetch") || error.message.includes("placeholder")) {
             const role = email.toLowerCase().includes("admin") ? "admin" : "user";
-            localStorage.setItem(
-              "mindmix_current_user",
-              JSON.stringify({ email, role })
-            );
+            const sessionData = JSON.stringify({ email, role });
+            localStorage.setItem("wasmspace_current_user", sessionData);
+            localStorage.setItem("mindmix_current_user", sessionData);
             router.push("/#pricing");
             return;
           }
@@ -126,14 +124,13 @@ function LoginForm() {
         }
 
         const role = email.toLowerCase().includes("admin") ? "admin" : "user";
-        localStorage.setItem(
-          "mindmix_current_user",
-          JSON.stringify({
-            email,
-            name: data?.user?.user_metadata?.full_name || email.split("@")[0],
-            role,
-          })
-        );
+        const sessionData = JSON.stringify({
+          email,
+          name: data?.user?.user_metadata?.full_name || email.split("@")[0],
+          role,
+        });
+        localStorage.setItem("wasmspace_current_user", sessionData);
+        localStorage.setItem("mindmix_current_user", sessionData);
 
         setSuccessMsg("Logged in successfully! Redirecting...");
         setTimeout(() => router.push("/#pricing"), 1000);
@@ -155,22 +152,22 @@ function LoginForm() {
         >
           <div className="w-10 h-10 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
             <Image
-              src="/mindmix-logo-v2.png"
-              alt="MindMix Logo"
+              src="/wasmspace-logo.png"
+              alt="WasmSpace Logo"
               width={40}
               height={40}
               className="w-full h-full object-contain drop-shadow-[0_0_14px_rgba(168,85,247,0.55)]"
               priority
             />
           </div>
-          <span>MindMix</span>
+          <span>WasmSpace</span>
         </Link>
         <h1 className="text-xl font-mono font-bold tracking-tight text-zinc-900 dark:text-white">
-          {isSignUp ? "Create Your Account" : "Sign In to MindMix"}
+          {isSignUp ? "Create Your Account" : "Sign In to WasmSpace"}
         </h1>
         <p className="text-xs text-zinc-500 dark:text-zinc-400">
           {isSignUp
-            ? "Join thousands of creators building with MindMix AI."
+            ? "Join thousands of creators building with WasmSpace AI."
             : "Sign in to access your cloud whiteboards & superpowers."}
         </p>
       </div>
@@ -227,7 +224,7 @@ function LoginForm() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="alex@mindmix.ai"
+              placeholder="alex@wasmspace.ai"
               className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-cyan-500 dark:focus:border-neon-cyan focus:ring-1 focus:ring-cyan-500 transition-all font-sans"
             />
           </div>

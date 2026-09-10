@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// MindMix — File & Folder Tree Types (VS Code-style Explorer)
+// WasmSpace — File & Folder Tree Types (VS Code-style Explorer)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface BoardFileNode {

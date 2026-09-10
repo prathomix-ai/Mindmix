@@ -171,7 +171,7 @@ export default function VoiceControlWidget({
                     "draw diamond",
                     "draw arrow",
                     "add note Sprint Goals",
-                    "add text MindMix Canvas",
+                    "add text WasmSpace Canvas",
                     "open code",
                     "zoom in",
                     "zoom to fit",

@@ -89,7 +89,7 @@ export function ProPricingCard({
       // Check local storage for mock/persisted login in dev
       const localUser =
         typeof window !== "undefined"
-          ? localStorage.getItem("mindmix_current_user")
+          ? (localStorage.getItem("wasmspace_current_user") || localStorage.getItem("mindmix_current_user"))
           : null;
       if (localUser) {
         const parsed = JSON.parse(localUser);
@@ -100,7 +100,7 @@ export function ProPricingCard({
     } catch {
       const localUser =
         typeof window !== "undefined"
-          ? localStorage.getItem("mindmix_current_user")
+          ? (localStorage.getItem("wasmspace_current_user") || localStorage.getItem("mindmix_current_user"))
           : null;
       return !!(localUser && JSON.parse(localUser)?.email);
     }
@@ -212,17 +212,17 @@ export function ProPricingCard({
         "rzp_test_Ta2kWl9IX7CgkT",
       amount: orderData.amount, // in subunits (* 100)
       currency: orderData.currency || "USD",
-      name: "PRATHOMIX MindMix Pro",
+      name: "WasmSpace Pro",
       description: isYearly
-        ? `MindMix Pro Yearly Membership ($${yearlyPrice}/year)`
-        : `MindMix Pro Monthly Membership ($${monthlyPrice}/month)`,
+        ? `WasmSpace Pro Yearly Membership ($${yearlyPrice}/year)`
+        : `WasmSpace Pro Monthly Membership ($${monthlyPrice}/month)`,
       order_id: orderData.order_id,
       theme: {
         color: "#00f5ff",
       },
       prefill: {
-        name: "MindMix Creator",
-        email: "creator@mindmix.ai",
+        name: "WasmSpace Creator",
+        email: "creator@wasmspace.ai",
         contact: "9999999999",
       },
       // Payment Success Callback: verify HMAC-SHA256 signature with backend
@@ -249,15 +249,18 @@ export function ProPricingCard({
           if (verifyRes.ok && verifyData.success) {
             setPaymentSuccess(response.razorpay_payment_id);
             alert(
-              `🎉 Payment Verified Successfully!\nPayment ID: ${response.razorpay_payment_id}\nWelcome to MindMix PRO!`
+              `🎉 Payment Verified Successfully!\nPayment ID: ${response.razorpay_payment_id}\nWelcome to WasmSpace PRO!`
             );
 
             // Activate local Pro status
             try {
-              const currentUser = localStorage.getItem("mindmix_current_user");
+              const currentUser =
+                localStorage.getItem("wasmspace_current_user") ||
+                localStorage.getItem("mindmix_current_user");
               if (currentUser) {
                 const parsed = JSON.parse(currentUser);
                 parsed.role = "pro";
+                localStorage.setItem("wasmspace_current_user", JSON.stringify(parsed));
                 localStorage.setItem("mindmix_current_user", JSON.stringify(parsed));
               }
             } catch (e) {

@@ -109,7 +109,7 @@ export function LeftSidebar({
             >
               <div className="w-8 h-8 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 duration-300">
                 <Image
-                  src="/mindmix-logo-v2.png"
+                  src="/wasmspace-logo.png"
                   alt="WasmSpace Logo"
                   width={32}
                   height={32}
@@ -140,8 +140,8 @@ export function LeftSidebar({
             >
               <div className="w-8 h-8 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 duration-300">
                 <Image
-                  src="/mindmix-logo-v2.png"
-                  alt="MindMix Logo"
+                  src="/wasmspace-logo.png"
+                  alt="WasmSpace Logo"
                   width={32}
                   height={32}
                   className="w-full h-full object-contain drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]"
@@ -525,7 +525,7 @@ export function LeftSidebar({
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-1.5" title="WasmSpace">
             <Image
-              src="/mindmix-logo-v2.png"
+              src="/wasmspace-logo.png"
               alt="WasmSpace Logo"
               width={24}
               height={24}
@@ -659,7 +659,7 @@ export function LeftSidebar({
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <div className="flex items-center gap-2">
                 <Image
-                  src="/mindmix-logo-v2.png"
+                  src="/wasmspace-logo.png"
                   alt="WasmSpace"
                   width={28}
                   height={28}

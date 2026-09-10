@@ -85,7 +85,7 @@ const INITIAL_TREE_NODES: BoardFileNode[] = [
     children: [
       {
         id: "file-system-design",
-        name: "system-design.mindmix",
+        name: "system-design.wasmspace",
         type: "file",
         parentId: "folder-arch",
         createdAt: new Date().toISOString(),
@@ -93,7 +93,7 @@ const INITIAL_TREE_NODES: BoardFileNode[] = [
       },
       {
         id: "file-api-gateway",
-        name: "api-gateway.mindmix",
+        name: "api-gateway.wasmspace",
         type: "file",
         parentId: "folder-arch",
         createdAt: new Date().toISOString(),
@@ -111,7 +111,7 @@ const INITIAL_TREE_NODES: BoardFileNode[] = [
     children: [
       {
         id: "file-auth-flow",
-        name: "auth-flow.mindmix",
+        name: "auth-flow.wasmspace",
         type: "file",
         parentId: "folder-flows",
         createdAt: new Date().toISOString(),
@@ -121,7 +121,7 @@ const INITIAL_TREE_NODES: BoardFileNode[] = [
   },
   {
     id: "file-main-session",
-    name: "main-session.mindmix",
+    name: "main-session.wasmspace",
     type: "file",
     parentId: null,
     createdAt: new Date().toISOString(),
@@ -211,7 +211,7 @@ const QUICK_COMMANDS: QuickCommand[] = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Main MindMix Excalidraw Canvas Component
+// Main WasmSpace Excalidraw Canvas Component
 // ─────────────────────────────────────────────────────────────────────────────
 export default function WhiteboardCanvas() {
   // Excalidraw Imperative API ref & state
@@ -239,7 +239,7 @@ export default function WhiteboardCanvas() {
   );
 
   // Board Title & Metadata
-  const [boardTitle, setBoardTitle] = useState("MindMix Session");
+  const [boardTitle, setBoardTitle] = useState("WasmSpace Session");
 
   // Pro Subscription Gating State (Access Control)
   const [isProUser, setIsProUser] = useState<boolean>(false);
@@ -258,7 +258,7 @@ export default function WhiteboardCanvas() {
   // Auto-grant PRO & Admin privileges for admin@prathomix.tech
   useEffect(() => {
     try {
-      const stored = localStorage.getItem("mindmix_current_user");
+      const stored = localStorage.getItem("wasmspace_current_user") || localStorage.getItem("mindmix_current_user");
       if (stored) {
         const user = JSON.parse(stored);
         if (
@@ -357,9 +357,9 @@ export default function WhiteboardCanvas() {
       try {
         // Check quota with Next.js Load Balancer Backend
         try {
-          const storedUser = typeof window !== "undefined" ? localStorage.getItem("mindmix_current_user") : null;
+          const storedUser = typeof window !== "undefined" ? (localStorage.getItem("wasmspace_current_user") || localStorage.getItem("mindmix_current_user")) : null;
           const parsedUser = storedUser ? JSON.parse(storedUser) : null;
-          const userEmail = parsedUser?.email || "guest@mindmix.app";
+          const userEmail = parsedUser?.email || "guest@wasmspace.ai";
           const userId = parsedUser?.id;
 
           const res = await fetch("/api/execute-command", {
@@ -1431,9 +1431,9 @@ export default function WhiteboardCanvas() {
       // Call Next.js Load Balancer API Route for custom user prompts
       (async () => {
         try {
-          const storedUser = typeof window !== "undefined" ? localStorage.getItem("mindmix_current_user") : null;
+          const storedUser = typeof window !== "undefined" ? (localStorage.getItem("wasmspace_current_user") || localStorage.getItem("mindmix_current_user")) : null;
           const parsedUser = storedUser ? JSON.parse(storedUser) : null;
-          const userEmail = parsedUser?.email || "guest@mindmix.app";
+          const userEmail = parsedUser?.email || "guest@wasmspace.ai";
           const userId = parsedUser?.id;
 
           const res = await fetch("/api/execute-command", {
@@ -1537,7 +1537,7 @@ export default function WhiteboardCanvas() {
    * Broadcasts local canvas changes to all active collaborators via Supabase Realtime Channels.
    *
    * Architecture Note:
-   * Uses Supabase Broadcast channel (`realtime:mindmix-canvas:<board_id>`) to multiplex
+   * Uses Supabase Broadcast channel (`realtime:wasmspace-canvas:<board_id>`) to multiplex
    * delta changes with debounce to avoid network saturation, while persisting complete
    * scene snapshots periodically to Supabase Postgres with pgvector embeddings.
    */
@@ -1615,7 +1615,7 @@ export default function WhiteboardCanvas() {
       }
 
       setActiveFileId(file.id);
-      setBoardTitle(file.name.replace(/\.mindmix$/, ""));
+      setBoardTitle(file.name.replace(/\.(wasmspace|mindmix)$/, ""));
 
       // 2. Restore saved scene or initialize fresh board
       const savedSnapshot = boardSnapshotsRef.current[file.id];
@@ -1666,7 +1666,7 @@ export default function WhiteboardCanvas() {
 
   const handleCreateFile = useCallback(
     (parentId: string | null, name: string) => {
-      const formattedName = name.endsWith(".mindmix") ? name : `${name}.mindmix`;
+      const formattedName = (name.endsWith(".wasmspace") || name.endsWith(".mindmix")) ? name : `${name}.wasmspace`;
       const newFile: BoardFileNode = {
         id: `file-${Date.now()}`,
         name: formattedName,
@@ -1745,7 +1745,7 @@ export default function WhiteboardCanvas() {
       });
 
       if (id === activeFileId) {
-        setBoardTitle(newName.replace(/\.mindmix$/, ""));
+        setBoardTitle(newName.replace(/\.(wasmspace|mindmix)$/, ""));
       }
     },
     [activeFileId]
@@ -1881,7 +1881,7 @@ export default function WhiteboardCanvas() {
   );
 
   // ───────────────────────────────────────────────────────────────────────────
-  // Canvas Screenshot & Export Engine (Free: MindMix Watermark | Pro: Clean)
+  // Canvas Screenshot & Export Engine (Free: WasmSpace Watermark | Pro: Clean)
   // ───────────────────────────────────────────────────────────────────────────
   const handleTakeScreenshot = useCallback(async () => {
     const api = excalidrawAPIRef.current;
@@ -1921,7 +1921,7 @@ export default function WhiteboardCanvas() {
         return;
       }
 
-      // ── NORMAL / FREE USER: Stamp official MindMix Watermark ───────────────
+      // ── NORMAL / FREE USER: Stamp official WasmSpace Watermark ───────────────
       const img = new Image();
       const rawUrl = URL.createObjectURL(blob);
 
@@ -1936,7 +1936,7 @@ export default function WhiteboardCanvas() {
         ctx.drawImage(img, 0, 0);
 
         // Watermark pill details (Only rendered on the exported image, never on the live UI)
-        const text = "✦ Powered by MindMix";
+        const text = "✦ Powered by WasmSpace";
         ctx.font = "bold 15px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
         const metrics = ctx.measureText(text);
         const padding = 16;
@@ -2428,7 +2428,7 @@ export default function WhiteboardCanvas() {
                       </div>
                       <div>
                         <h3 className="text-xs font-semibold text-white flex items-center gap-1.5">
-                          MindMix AI Agent
+                          WasmSpace AI Agent
                           <span className="px-1.5 py-0.5 rounded-full text-[9px] bg-neon-cyan/15 text-neon-cyan border border-neon-cyan/30">
                             PRO
                           </span>

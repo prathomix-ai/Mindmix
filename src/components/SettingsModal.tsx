@@ -115,7 +115,9 @@ export function SettingsModal({
       // Fallback to local storage if running in guest / local mode
       if (typeof window !== "undefined" && isMounted) {
         try {
-          const stored = localStorage.getItem("mindmix_current_user");
+          const stored =
+            localStorage.getItem("wasmspace_current_user") ||
+            localStorage.getItem("mindmix_current_user");
           if (stored) {
             const parsed = JSON.parse(stored);
             setName(parsed.name || (parsed.email ? parsed.email.split("@")[0] : ""));
@@ -164,12 +166,13 @@ export function SettingsModal({
 
     if (typeof window !== "undefined") {
       try {
-        const stored = localStorage.getItem("mindmix_current_user");
+        const stored =
+          localStorage.getItem("wasmspace_current_user") ||
+          localStorage.getItem("mindmix_current_user");
         const parsed = stored ? JSON.parse(stored) : {};
-        localStorage.setItem(
-          "mindmix_current_user",
-          JSON.stringify({ ...parsed, name, email })
-        );
+        const updated = JSON.stringify({ ...parsed, name, email });
+        localStorage.setItem("wasmspace_current_user", updated);
+        localStorage.setItem("mindmix_current_user", updated);
       } catch {}
     }
 

@@ -67,7 +67,7 @@ export function TopNavBar({
         >
           <div className="relative w-7 h-7 flex items-center justify-center shrink-0 transition-transform duration-300 ease-in-out group-hover:scale-110">
             <Image
-              src="/mindmix-logo-v2.png"
+              src="/wasmspace-logo.png"
               alt="WasmSpace Logo"
               width={28}
               height={28}

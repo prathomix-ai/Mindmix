@@ -35,9 +35,9 @@ export const metadata: Metadata = {
     url: "https://prathomix.tech",
   },
   icons: {
-    icon: "/mindmix-logo-v2.png",
-    shortcut: "/mindmix-logo-v2.png",
-    apple: "/mindmix-logo-v2.png",
+    icon: "/wasmspace-logo.png",
+    shortcut: "/wasmspace-logo.png",
+    apple: "/wasmspace-logo.png",
   },
 };
 

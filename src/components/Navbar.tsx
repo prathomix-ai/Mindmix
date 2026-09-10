@@ -35,6 +35,7 @@ export function Navbar({ onOpenAuth }: NavbarProps) {
 
   const handleSignOut = async () => {
     try {
+      localStorage.removeItem("wasmspace_current_user");
       localStorage.removeItem("mindmix_current_user");
       const supabase = createClient();
       await supabase.auth.signOut();
@@ -49,7 +50,9 @@ export function Navbar({ onOpenAuth }: NavbarProps) {
   useEffect(() => {
     // 1. Sync from localStorage
     try {
-      const savedUser = localStorage.getItem("mindmix_current_user");
+      const savedUser =
+        localStorage.getItem("wasmspace_current_user") ||
+        localStorage.getItem("mindmix_current_user");
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
         if (parsed && parsed.email) {
@@ -86,7 +89,7 @@ export function Navbar({ onOpenAuth }: NavbarProps) {
         <Link href="/" className="flex items-center gap-2.5 group">
           <div className="relative w-9 h-9 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
             <Image
-              src="/mindmix-logo-v2.png"
+              src="/wasmspace-logo.png"
               alt="WasmSpace Logo"
               width={36}
               height={36}

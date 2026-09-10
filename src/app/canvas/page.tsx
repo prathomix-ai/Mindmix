@@ -3,7 +3,7 @@
 import React from "react";
 import dynamic from "next/dynamic";
 
-// Dynamic SSR-free import of the full MindMix Whiteboard Canvas OS
+// Dynamic SSR-free import of the full WasmSpace Whiteboard Canvas OS
 const WhiteboardCanvas = dynamic(
   () => import("@/app/canvas/WhiteboardCanvas"),
   {

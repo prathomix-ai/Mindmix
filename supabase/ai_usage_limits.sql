@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════════════
--- MindMix SaaS: AI Usage Limits, Quota Management & Midnight IST pg_cron
+-- WasmSpace SaaS: AI Usage Limits, Quota Management & Midnight IST pg_cron
 -- ═══════════════════════════════════════════════════════════════════════════
 
 -- 1. Create ai_usage_limits Table

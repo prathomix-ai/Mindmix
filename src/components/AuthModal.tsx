@@ -76,10 +76,9 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
           // If Supabase is unconfigured or mock in dev
           if (error.message.includes("fetch") || error.message.includes("placeholder")) {
             const role = email.toLowerCase().includes("admin") ? "admin" : "user";
-            localStorage.setItem(
-              "mindmix_current_user",
-              JSON.stringify({ email, name: fullName, phone: phoneNumber, role })
-            );
+            const payload = JSON.stringify({ email, name: fullName, phone: phoneNumber, role });
+            localStorage.setItem("wasmspace_current_user", payload);
+            localStorage.setItem("mindmix_current_user", payload);
             onAuthSuccess({ email, role });
             onClose();
             return;
@@ -103,11 +102,10 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
             error.message.includes("Invalid login")
           ) {
             // Check if user entered an admin email
-            const role = email.toLowerCase().includes("admin") ? "admin" : "user";
-            localStorage.setItem(
-              "mindmix_current_user",
-              JSON.stringify({ email, role })
-            );
+            const role: "user" | "admin" = email.toLowerCase().includes("admin") ? "admin" : "user";
+            const payload = JSON.stringify({ email, role });
+            localStorage.setItem("wasmspace_current_user", payload);
+            localStorage.setItem("mindmix_current_user", payload);
             onAuthSuccess({ email, role });
             onClose();
             return;
@@ -129,14 +127,13 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
           }
         }
 
-        localStorage.setItem(
-          "mindmix_current_user",
-          JSON.stringify({
-            email,
-            name: data?.user?.user_metadata?.full_name || email.split("@")[0],
-            role: userRole,
-          })
-        );
+        const sessionData = JSON.stringify({
+          email,
+          name: data?.user?.user_metadata?.full_name || email.split("@")[0],
+          role: userRole,
+        });
+        localStorage.setItem("wasmspace_current_user", sessionData);
+        localStorage.setItem("mindmix_current_user", sessionData);
         onAuthSuccess({ email, role: userRole });
         onClose();
       }
@@ -167,7 +164,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 flex items-center justify-center shrink-0">
               <Image
-                src="/mindmix-logo-v2.png"
+                src="/wasmspace-logo.png"
                 alt="WasmSpace Logo"
                 width={40}
                 height={40}

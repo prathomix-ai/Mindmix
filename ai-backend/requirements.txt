@@ -1,4 +1,4 @@
-# MindMix AI Backend -- Python Dependencies
+# WasmSpace AI Backend -- Python Dependencies
 # Install with: pip install -r requirements.txt
 
 # Web framework

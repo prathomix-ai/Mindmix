@@ -1,5 +1,5 @@
 -- =============================================================================
--- MindMix -- pgvector RAG Migration
+-- WasmSpace -- pgvector RAG Migration
 -- Run this AFTER the base schema.sql in your Supabase SQL Editor
 -- =============================================================================
 
