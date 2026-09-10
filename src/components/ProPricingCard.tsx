@@ -89,7 +89,7 @@ export function ProPricingCard({
       // Check local storage for mock/persisted login in dev
       const localUser =
         typeof window !== "undefined"
-          ? (localStorage.getItem("wasmspace_current_user") || localStorage.getItem("mindmix_current_user"))
+          ? localStorage.getItem("wasmspace_current_user")
           : null;
       if (localUser) {
         const parsed = JSON.parse(localUser);
@@ -100,7 +100,7 @@ export function ProPricingCard({
     } catch {
       const localUser =
         typeof window !== "undefined"
-          ? (localStorage.getItem("wasmspace_current_user") || localStorage.getItem("mindmix_current_user"))
+          ? localStorage.getItem("wasmspace_current_user")
           : null;
       return !!(localUser && JSON.parse(localUser)?.email);
     }
@@ -254,14 +254,11 @@ export function ProPricingCard({
 
             // Activate local Pro status
             try {
-              const currentUser =
-                localStorage.getItem("wasmspace_current_user") ||
-                localStorage.getItem("mindmix_current_user");
+              const currentUser = localStorage.getItem("wasmspace_current_user");
               if (currentUser) {
                 const parsed = JSON.parse(currentUser);
                 parsed.role = "pro";
                 localStorage.setItem("wasmspace_current_user", JSON.stringify(parsed));
-                localStorage.setItem("mindmix_current_user", JSON.stringify(parsed));
               }
             } catch (e) {
               console.error("Failed to store pro role:", e);

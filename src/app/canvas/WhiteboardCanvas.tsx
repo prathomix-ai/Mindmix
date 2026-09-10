@@ -258,7 +258,7 @@ export default function WhiteboardCanvas() {
   // Auto-grant PRO & Admin privileges for admin@prathomix.tech
   useEffect(() => {
     try {
-      const stored = localStorage.getItem("wasmspace_current_user") || localStorage.getItem("mindmix_current_user");
+      const stored = localStorage.getItem("wasmspace_current_user");
       if (stored) {
         const user = JSON.parse(stored);
         if (
@@ -357,7 +357,7 @@ export default function WhiteboardCanvas() {
       try {
         // Check quota with Next.js Load Balancer Backend
         try {
-          const storedUser = typeof window !== "undefined" ? (localStorage.getItem("wasmspace_current_user") || localStorage.getItem("mindmix_current_user")) : null;
+          const storedUser = typeof window !== "undefined" ? localStorage.getItem("wasmspace_current_user") : null;
           const parsedUser = storedUser ? JSON.parse(storedUser) : null;
           const userEmail = parsedUser?.email || "guest@wasmspace.ai";
           const userId = parsedUser?.id;
@@ -1431,7 +1431,7 @@ export default function WhiteboardCanvas() {
       // Call Next.js Load Balancer API Route for custom user prompts
       (async () => {
         try {
-          const storedUser = typeof window !== "undefined" ? (localStorage.getItem("wasmspace_current_user") || localStorage.getItem("mindmix_current_user")) : null;
+          const storedUser = typeof window !== "undefined" ? localStorage.getItem("wasmspace_current_user") : null;
           const parsedUser = storedUser ? JSON.parse(storedUser) : null;
           const userEmail = parsedUser?.email || "guest@wasmspace.ai";
           const userId = parsedUser?.id;
@@ -1615,7 +1615,7 @@ export default function WhiteboardCanvas() {
       }
 
       setActiveFileId(file.id);
-      setBoardTitle(file.name.replace(/\.(wasmspace|mindmix)$/, ""));
+      setBoardTitle(file.name.replace(/\.wasmspace$/, ""));
 
       // 2. Restore saved scene or initialize fresh board
       const savedSnapshot = boardSnapshotsRef.current[file.id];
@@ -1666,7 +1666,7 @@ export default function WhiteboardCanvas() {
 
   const handleCreateFile = useCallback(
     (parentId: string | null, name: string) => {
-      const formattedName = (name.endsWith(".wasmspace") || name.endsWith(".mindmix")) ? name : `${name}.wasmspace`;
+      const formattedName = name.endsWith(".wasmspace") ? name : `${name}.wasmspace`;
       const newFile: BoardFileNode = {
         id: `file-${Date.now()}`,
         name: formattedName,
@@ -1745,7 +1745,7 @@ export default function WhiteboardCanvas() {
       });
 
       if (id === activeFileId) {
-        setBoardTitle(newName.replace(/\.(wasmspace|mindmix)$/, ""));
+        setBoardTitle(newName.replace(/\.wasmspace$/, ""));
       }
     },
     [activeFileId]

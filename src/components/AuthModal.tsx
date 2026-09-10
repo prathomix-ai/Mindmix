@@ -78,7 +78,6 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
             const role = email.toLowerCase().includes("admin") ? "admin" : "user";
             const payload = JSON.stringify({ email, name: fullName, phone: phoneNumber, role });
             localStorage.setItem("wasmspace_current_user", payload);
-            localStorage.setItem("mindmix_current_user", payload);
             onAuthSuccess({ email, role });
             onClose();
             return;
@@ -105,7 +104,6 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
             const role: "user" | "admin" = email.toLowerCase().includes("admin") ? "admin" : "user";
             const payload = JSON.stringify({ email, role });
             localStorage.setItem("wasmspace_current_user", payload);
-            localStorage.setItem("mindmix_current_user", payload);
             onAuthSuccess({ email, role });
             onClose();
             return;
@@ -133,7 +131,6 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
           role: userRole,
         });
         localStorage.setItem("wasmspace_current_user", sessionData);
-        localStorage.setItem("mindmix_current_user", sessionData);
         onAuthSuccess({ email, role: userRole });
         onClose();
       }

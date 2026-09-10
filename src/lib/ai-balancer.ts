@@ -1,0 +1,317 @@
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * WasmSpace — Elite AI Load Balancer & Key Rotator
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Features:
+ * 1. Round-Robin Key Cycling across multiple free-tier keys (GEMINI_KEY_1..5, GROQ_KEY_1..5).
+ * 2. Strict Token Throttling (800 tokens for chat/standard, 2048 for code generation).
+ * 3. Automatic Failover & Retry (catches 429 Too Many Requests & 5xx Server Errors,
+ *    rotates to the next key, and seamlessly falls back between Gemini and Groq).
+ * 4. Zero-Leak Server-Side Security (server-only runtime check, no client exposure).
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+// ── Token Limit Constants ───────────────────────────────────────────────────
+export const TOKEN_LIMITS = {
+  CHAT: 800,        // Standard conversational queries & UI prompts
+  CODE: 2048,       // Code generation & complex script architecture
+  DEFAULT: 800,
+} as const;
+
+export type TaskMode = "chat" | "code";
+export type AIProvider = "gemini" | "groq";
+
+export interface AIBalancerOptions {
+  prompt: string;
+  systemPrompt?: string;
+  mode?: TaskMode;
+  maxTokens?: number;
+  temperature?: number;
+  primaryProvider?: AIProvider;
+  responseMimeType?: "text/plain" | "application/json";
+}
+
+export interface AIBalancerResponse {
+  text: string;
+  provider: AIProvider;
+  keyIdentifier: string;
+  attempts: number;
+  executionTimeMs: number;
+}
+
+// ── In-Memory Round-Robin State ──────────────────────────────────────────────
+let geminiPointer = 0;
+let groqPointer = 0;
+
+/**
+ * Reads and validates API keys from server environment variables.
+ * Supports GEMINI_KEY_1..5, GROQ_KEY_1..5, or legacy comma-separated lists.
+ */
+export function getProviderKeys(provider: AIProvider): string[] {
+  // Ensure server-only execution
+  if (typeof window !== "undefined") {
+    throw new Error("Security Violation: AI Balancer must never execute in the browser.");
+  }
+
+  const prefix = provider.toUpperCase(); // "GEMINI" or "GROQ"
+  const collectedKeys: string[] = [];
+
+  // 1. Read indexed keys: GEMINI_KEY_1 through GEMINI_KEY_10
+  for (let i = 1; i <= 10; i++) {
+    const key = process.env[`${prefix}_KEY_${i}`];
+    if (key && key.trim().length > 0) {
+      collectedKeys.push(key.trim());
+    }
+  }
+
+  // 2. Fallback to comma-separated keys if provided: GEMINI_KEYS="key1,key2,key3"
+  const commaSeparated = process.env[`${prefix}_KEYS`];
+  if (commaSeparated) {
+    const parts = commaSeparated.split(",").map((k) => k.trim()).filter(Boolean);
+    for (const part of parts) {
+      if (!collectedKeys.includes(part)) {
+        collectedKeys.push(part);
+      }
+    }
+  }
+
+  // 3. Fallback to standard single key: GEMINI_API_KEY / GROQ_API_KEY
+  const singleKey = process.env[`${prefix}_API_KEY`];
+  if (singleKey && !collectedKeys.includes(singleKey.trim())) {
+    collectedKeys.push(singleKey.trim());
+  }
+
+  return collectedKeys;
+}
+
+/**
+ * Sequentially selects the next key using round-robin logic.
+ */
+function getNextRoundRobinKey(keys: string[], provider: AIProvider): { key: string; index: number } {
+  if (keys.length === 0) {
+    return { key: "", index: -1 };
+  }
+
+  if (provider === "gemini") {
+    const index = geminiPointer % keys.length;
+    geminiPointer = (geminiPointer + 1) % keys.length;
+    return { key: keys[index], index: index + 1 };
+  } else {
+    const index = groqPointer % keys.length;
+    groqPointer = (groqPointer + 1) % keys.length;
+    return { key: keys[index], index: index + 1 };
+  }
+}
+
+// ── Provider Execution: Google Gemini ────────────────────────────────────────
+async function callGemini(
+  apiKey: string,
+  prompt: string,
+  systemPrompt: string | undefined,
+  maxTokens: number,
+  temperature: number,
+  responseMimeType: "text/plain" | "application/json"
+): Promise<string> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+  const contents = [
+    {
+      role: "user",
+      parts: [
+        {
+          text: systemPrompt
+            ? `${systemPrompt}\n\nUser Request: ${prompt}`
+            : prompt,
+        },
+      ],
+    },
+  ];
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(8000), // 8s timeout to avoid hung connections
+    body: JSON.stringify({
+      contents,
+      generationConfig: {
+        temperature,
+        maxOutputTokens: maxTokens,
+        ...(responseMimeType === "application/json" ? { responseMimeType: "application/json" } : {}),
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => "");
+    const error = new Error(`Gemini Error (${res.status}): ${errBody.slice(0, 200)}`);
+    (error as any).status = res.status;
+    throw error;
+  }
+
+  const data = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) {
+    throw new Error("Gemini returned an empty response candidate.");
+  }
+  return text;
+}
+
+// ── Provider Execution: Groq (Llama-3.3-70B-Versatile) ───────────────────────
+async function callGroq(
+  apiKey: string,
+  prompt: string,
+  systemPrompt: string | undefined,
+  maxTokens: number,
+  temperature: number,
+  responseMimeType: "text/plain" | "application/json"
+): Promise<string> {
+  const url = "https://api.groq.com/openai/v1/chat/completions";
+
+  const messages: Array<{ role: "system" | "user"; content: string }> = [];
+  if (systemPrompt) {
+    messages.push({ role: "system", content: systemPrompt });
+  }
+  messages.push({ role: "user", content: prompt });
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    signal: AbortSignal.timeout(8000),
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      messages,
+      temperature,
+      max_tokens: maxTokens,
+      ...(responseMimeType === "application/json" ? { response_format: { type: "json_object" } } : {}),
+    }),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => "");
+    const error = new Error(`Groq Error (${res.status}): ${errBody.slice(0, 200)}`);
+    (error as any).status = res.status;
+    throw error;
+  }
+
+  const data = await res.json();
+  const text = data?.choices?.[0]?.message?.content;
+  if (!text) {
+    throw new Error("Groq returned an empty choice content.");
+  }
+  return text;
+}
+
+// ── Master Load Balancer Function ────────────────────────────────────────────
+/**
+ * Executes an AI prompt through round-robin key pools with strict token throttling
+ * and resilient cross-provider failover.
+ *
+ * @param options AIBalancerOptions
+ * @returns Promise<AIBalancerResponse>
+ */
+export async function executeWithLoadBalancer(
+  options: AIBalancerOptions
+): Promise<AIBalancerResponse> {
+  const startTime = Date.now();
+
+  const {
+    prompt,
+    systemPrompt,
+    mode = "chat",
+    temperature = 0.2,
+    primaryProvider = "gemini",
+    responseMimeType = "text/plain",
+  } = options;
+
+  // 1. Enforce strict token limits (800 for chat, 2048 for code)
+  const resolvedMaxTokens =
+    options.maxTokens ||
+    (mode === "code" ? TOKEN_LIMITS.CODE : TOKEN_LIMITS.CHAT);
+
+  // 2. Determine provider order (e.g. Gemini -> Groq or Groq -> Gemini)
+  const secondaryProvider: AIProvider = primaryProvider === "gemini" ? "groq" : "gemini";
+  const providerSequence: AIProvider[] = [primaryProvider, secondaryProvider];
+
+  let totalAttempts = 0;
+  const failureLogs: string[] = [];
+
+  for (const provider of providerSequence) {
+    const keys = getProviderKeys(provider);
+
+    if (keys.length === 0) {
+      failureLogs.push(`No keys configured for provider [${provider}].`);
+      continue;
+    }
+
+    // Try up to the total number of keys available for this provider
+    let providerAttempts = 0;
+    const maxAttemptsForProvider = keys.length;
+
+    while (providerAttempts < maxAttemptsForProvider) {
+      providerAttempts++;
+      totalAttempts++;
+
+      const { key, index } = getNextRoundRobinKey(keys, provider);
+      const keyId = `${provider.toUpperCase()}_KEY_${index}`;
+
+      try {
+        let resultText = "";
+        if (provider === "gemini") {
+          resultText = await callGemini(
+            key,
+            prompt,
+            systemPrompt,
+            resolvedMaxTokens,
+            temperature,
+            responseMimeType
+          );
+        } else {
+          resultText = await callGroq(
+            key,
+            prompt,
+            systemPrompt,
+            resolvedMaxTokens,
+            temperature,
+            responseMimeType
+          );
+        }
+
+        // Success! Return immediately with telemetry
+        return {
+          text: resultText,
+          provider,
+          keyIdentifier: keyId,
+          attempts: totalAttempts,
+          executionTimeMs: Date.now() - startTime,
+        };
+      } catch (err: any) {
+        const statusCode = err?.status || (err.message.includes("429") ? 429 : 500);
+        const isRateLimit = statusCode === 429;
+        const isServerError = statusCode >= 500 && statusCode <= 599;
+
+        failureLogs.push(
+          `[${keyId}] Failed (${statusCode}): ${err.message || "Unknown error"}`
+        );
+
+        console.warn(
+          `[AI Load Balancer] ${keyId} threw ${statusCode} (${
+            isRateLimit ? "Rate Limit / 429" : isServerError ? "Server Error / 5xx" : "Request Error"
+          }). Rotating to next key...`
+        );
+
+        // Immediate retry with the next key in the loop
+      }
+    }
+  }
+
+  // If we reach this point, all keys across all providers failed
+  const finalError = new Error(
+    `All AI Provider keys exhausted. Failures:\n${failureLogs.join("\n")}`
+  );
+  (finalError as any).allFailures = failureLogs;
+  (finalError as any).totalAttempts = totalAttempts;
+  throw finalError;
+}

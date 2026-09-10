@@ -36,7 +36,6 @@ export function Navbar({ onOpenAuth }: NavbarProps) {
   const handleSignOut = async () => {
     try {
       localStorage.removeItem("wasmspace_current_user");
-      localStorage.removeItem("mindmix_current_user");
       const supabase = createClient();
       await supabase.auth.signOut();
     } catch {
@@ -50,9 +49,7 @@ export function Navbar({ onOpenAuth }: NavbarProps) {
   useEffect(() => {
     // 1. Sync from localStorage
     try {
-      const savedUser =
-        localStorage.getItem("wasmspace_current_user") ||
-        localStorage.getItem("mindmix_current_user");
+      const savedUser = localStorage.getItem("wasmspace_current_user");
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
         if (parsed && parsed.email) {

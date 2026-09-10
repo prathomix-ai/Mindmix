@@ -94,7 +94,6 @@ function LoginForm() {
               role,
             });
             localStorage.setItem("wasmspace_current_user", sessionData);
-            localStorage.setItem("mindmix_current_user", sessionData);
             setSuccessMsg("Account created! Redirecting to pricing...");
             setTimeout(() => router.push("/#pricing"), 1000);
             return;
@@ -116,7 +115,6 @@ function LoginForm() {
             const role = email.toLowerCase().includes("admin") ? "admin" : "user";
             const sessionData = JSON.stringify({ email, role });
             localStorage.setItem("wasmspace_current_user", sessionData);
-            localStorage.setItem("mindmix_current_user", sessionData);
             router.push("/#pricing");
             return;
           }
@@ -130,7 +128,6 @@ function LoginForm() {
           role,
         });
         localStorage.setItem("wasmspace_current_user", sessionData);
-        localStorage.setItem("mindmix_current_user", sessionData);
 
         setSuccessMsg("Logged in successfully! Redirecting...");
         setTimeout(() => router.push("/#pricing"), 1000);

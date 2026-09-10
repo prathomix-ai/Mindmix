@@ -65,7 +65,7 @@ export interface ExecutionResult {
 export interface CodeTemplate {
   id: string;
   name: string;
-  category: "Algorithm" | "Math" | "Data" | "WasmSpace Canvas" | "MindMix Canvas";
+  category: "Algorithm" | "Math" | "Data" | "WasmSpace Canvas";
   description: string;
   code: string;
 }
