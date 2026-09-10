@@ -43,7 +43,7 @@ export default function VoiceControlWidget({
   return (
     <>
       {/* ── Floating Voice Dock / Bar ───────────────────────────────── */}
-      <div className="voice-control-dock glass" role="region" aria-label="Voice Control Bar">
+      <div className="voice-control-dock glass p-3 bottom-20 md:bottom-6" role="region" aria-label="Voice Control Bar">
         {/* Mic Toggle Button */}
         <button
           className={`voice-mic-btn ${isListening ? "listening" : ""} ${
@@ -116,7 +116,7 @@ export default function VoiceControlWidget({
             onClick={() => setShowCheatsheet(false)}
           >
             <motion.div
-              className="voice-cheatsheet-modal glass"
+              className="voice-cheatsheet-modal glass w-[95%] md:max-w-2xl mx-auto"
               onClick={(e) => e.stopPropagation()}
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}

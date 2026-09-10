@@ -6,7 +6,6 @@ import {
   User,
   Mail,
   Grid,
-  Palette,
   Sparkles,
   Languages,
   AlertTriangle,
@@ -203,17 +202,17 @@ export function SettingsModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="settings-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6"
     >
       {/* ── Glass Backdrop ──────────────────────────────────────────────── */}
       <div
-        className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-md transition-opacity animate-fade-in"
+        className="fixed inset-0 bg-[#050505]/75 backdrop-blur-xl transition-opacity animate-fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
 
       {/* ── Main Modal Container (Glassmorphism Card) ────────────────────── */}
-      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-3xl bg-white/90 dark:bg-[#0d111a]/90 backdrop-blur-xl border border-black/10 dark:border-white/15 shadow-[0_20px_60px_rgba(0,0,0,0.3)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden z-10 transition-all text-zinc-900 dark:text-zinc-100">
+      <div className="relative w-[95%] md:max-w-2xl mx-auto max-h-[90vh] flex flex-col rounded-3xl bg-white/95 dark:bg-[#0a0a0a]/90 backdrop-blur-xl border border-black/10 dark:border-white/10 shadow-2xl overflow-hidden z-10 transition-all text-zinc-900 dark:text-zinc-100">
         
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-black/5 dark:border-white/10">
@@ -651,7 +650,7 @@ export function SettingsModal({
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-2">
                         <h4 className="font-mono font-bold text-base text-zinc-900 dark:text-white">
-                          {tier === "pro" ? "MindMix Pro Plan" : "Starter Plan"}
+                          {tier === "pro" ? "WasmSpace Pro Plan" : "Starter Plan"}
                         </h4>
                         <span
                           className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider border ${

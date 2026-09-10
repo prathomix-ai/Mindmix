@@ -15,7 +15,6 @@ import {
   ArrowRight,
   AlertCircle,
   CheckCircle2,
-  Sparkles,
 } from "lucide-react";
 
 function LoginForm() {
@@ -73,7 +72,7 @@ function LoginForm() {
 
       if (isSignUp) {
         // Supabase Auth Sign-Up with metadata (full_name and phone_number)
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {

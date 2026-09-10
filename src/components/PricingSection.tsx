@@ -3,8 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { motion, type Variants } from "framer-motion";
-import { Check, ArrowRight, Sparkles, Zap, ShieldCheck, Crown, Lock, Mail } from "lucide-react";
-import { ProBadge } from "@/components/ProBadge";
+import { Check, ArrowRight, Sparkles, ShieldCheck, Mail } from "lucide-react";
 import { ContactSalesModal } from "@/components/ContactSalesModal";
 import { ProPricingCard } from "@/components/ProPricingCard";
 

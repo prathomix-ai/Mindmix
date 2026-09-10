@@ -59,7 +59,7 @@ export function PricingModal({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 16 }}
           transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-          className="relative w-full max-w-lg rounded-3xl bg-zinc-950/85 backdrop-blur-2xl border-2 border-cyan-500/40 shadow-[0_0_60px_rgba(0,245,255,0.25)] p-6 sm:p-8 text-white overflow-hidden"
+          className="relative w-[95%] md:max-w-2xl mx-auto rounded-3xl bg-zinc-950/85 backdrop-blur-2xl border-2 border-cyan-500/40 shadow-[0_0_60px_rgba(0,245,255,0.25)] p-5 sm:p-8 text-white overflow-hidden"
         >
           {/* Ambient Glows */}
           <div className="absolute -top-32 -right-32 w-64 h-64 rounded-full bg-cyan-500/20 blur-3xl pointer-events-none" />

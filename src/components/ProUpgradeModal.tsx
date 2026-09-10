@@ -33,7 +33,7 @@ export function ProUpgradeModal({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 16 }}
           transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-          className="relative w-full max-w-md rounded-3xl bg-zinc-950/85 backdrop-blur-2xl border-2 border-cyan-500/50 shadow-[0_0_50px_rgba(6,182,212,0.3)] p-6 sm:p-7 text-white overflow-hidden"
+          className="relative w-[95%] md:max-w-2xl mx-auto rounded-3xl bg-zinc-950/85 backdrop-blur-2xl border-2 border-cyan-500/50 shadow-[0_0_50px_rgba(6,182,212,0.3)] p-5 sm:p-7 text-white overflow-hidden"
         >
           {/* Ambient Glow accents */}
           <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-cyan-500/20 blur-3xl pointer-events-none" />

@@ -1,21 +1,53 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { ShieldCheck, ArrowRight, Menu, X, LogIn } from "lucide-react";
+import { ShieldCheck, ArrowRight, Menu, X, User } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 export interface NavbarProps {
   onOpenAuth?: () => void;
 }
 
 export function Navbar({ onOpenAuth }: NavbarProps) {
-  // ── Smart Admin Navigation: Live Production Auth State ────────────────────
-  const [currentUser, setCurrentUser] = useState<{ role: "admin" | "user"; email: string } | null>(null);
+  // ── Smart Admin Navigation & User Auth State ────────────────────
+  const [currentUser, setCurrentUser] = useState<{ role?: "admin" | "user"; email: string; name?: string } | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Click outside listener to close dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      localStorage.removeItem("mindmix_current_user");
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } catch {
+      // ignore
+    }
+    setCurrentUser(null);
+    setIsDropdownOpen(false);
+    window.location.reload();
+  };
 
   useEffect(() => {
+    // 1. Sync from localStorage
     try {
       const savedUser = localStorage.getItem("mindmix_current_user");
       if (savedUser) {
@@ -27,9 +59,24 @@ export function Navbar({ onOpenAuth }: NavbarProps) {
     } catch {
       // ignore
     }
-  }, []);
 
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    // 2. Sync from Supabase Auth
+    try {
+      const supabase = createClient();
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        const userEmail = user?.email;
+        if (userEmail) {
+          setCurrentUser((prev) => prev || {
+            email: userEmail,
+            name: user?.user_metadata?.full_name || userEmail.split("@")[0],
+            role: userEmail.toLowerCase().includes("admin") ? "admin" : "user",
+          });
+        }
+      }).catch(() => {});
+    } catch {
+      // ignore
+    }
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 border-b border-black/5 dark:border-white/10 bg-white/70 dark:bg-[#06070a]/75 backdrop-blur-xl transition-colors duration-200">
@@ -40,7 +87,7 @@ export function Navbar({ onOpenAuth }: NavbarProps) {
           <div className="relative w-9 h-9 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
             <Image
               src="/mindmix-logo-v2.png"
-              alt="MindMix Logo"
+              alt="WasmSpace Logo"
               width={36}
               height={36}
               className="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(168,85,247,0.55)]"
@@ -48,7 +95,7 @@ export function Navbar({ onOpenAuth }: NavbarProps) {
             />
           </div>
           <span className="font-mono font-extrabold text-xl tracking-tight text-zinc-900 dark:text-white">
-            MindMix
+            WasmSpace
           </span>
           <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] font-mono font-semibold rounded-full bg-cyan-500/10 dark:bg-neon-cyan/10 border border-cyan-500/30 dark:border-neon-cyan/30 text-cyan-600 dark:text-neon-cyan">
             v2.0 OS
@@ -71,8 +118,8 @@ export function Navbar({ onOpenAuth }: NavbarProps) {
           </a>
         </nav>
 
-        {/* Right: Theme Toggle, Conditionally Rendered Admin Button & Action CTA */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
+        {/* Right: Theme Toggle, Admin Button, Sign In / Avatar & Canvas Launch CTA */}
+        <div className="flex items-center space-x-4">
           <ThemeToggle />
 
           {/* ── 1. Smart Admin Navigation: Rendered ONLY if logged-in user is admin ── */}
@@ -96,24 +143,105 @@ export function Navbar({ onOpenAuth }: NavbarProps) {
             </motion.div>
           )}
 
-          {/* Sign In Trigger (if not logged in) */}
-          {!currentUser && onOpenAuth && (
-            <button
-              onClick={onOpenAuth}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-semibold text-zinc-700 dark:text-zinc-200 hover:text-cyan-500 dark:hover:text-neon-cyan hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
+          {/* ── 2. Sign In Link (If Not Logged In) ── */}
+          {!currentUser && (
+            <Link
+              href="/login"
+              onClick={
+                onOpenAuth
+                  ? (e) => {
+                      e.preventDefault();
+                      onOpenAuth();
+                    }
+                  : undefined
+              }
+              className="text-sm font-medium text-zinc-600 dark:text-gray-400 hover:text-zinc-900 dark:hover:text-white transition-colors duration-200 px-3 py-2 cursor-pointer"
+              title="Sign In to WasmSpace"
             >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>Sign In</span>
-            </button>
+              Sign In
+            </Link>
           )}
 
-          {/* Canvas Launch CTA Button */}
+          {/* ── 3. Profile Avatar Button & Interactive Dropdown Menu ── */}
+          <div ref={dropdownRef} className="relative">
+            <button
+              type="button"
+              id="user-profile-avatar-btn"
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="w-8 h-8 rounded-full bg-cyan-500/15 dark:bg-neon-cyan/20 border border-cyan-500/30 dark:border-neon-cyan/40 flex items-center justify-center text-cyan-700 dark:text-neon-cyan text-xs font-mono font-bold shadow-sm select-none hover:ring-2 hover:ring-cyan-500/40 transition-all cursor-pointer focus:outline-none"
+              title={currentUser ? `Logged in as ${currentUser.email}` : "Account Menu"}
+              aria-label="Toggle user profile menu"
+              aria-expanded={isDropdownOpen}
+            >
+              {currentUser?.email ? (
+                currentUser.email[0].toUpperCase()
+              ) : (
+                <User className="w-4 h-4" />
+              )}
+            </button>
+
+            {/* Dropdown Menu (Absolute Positioning) */}
+            {isDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-[#0a0a0a] border border-gray-800/60 rounded-xl shadow-2xl z-50 overflow-hidden backdrop-blur-md">
+                {currentUser ? (
+                  <div className="py-1 divide-y divide-gray-800/60">
+                    <div className="px-4 py-2 text-xs font-mono text-gray-400 truncate">
+                      {currentUser.email}
+                    </div>
+                    <div className="py-1">
+                      <Link
+                        href="/canvas"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="block w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-800/50 hover:text-white transition-colors"
+                      >
+                        Profile Settings
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={handleSignOut}
+                        className="block w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-gray-800/50 hover:text-red-400 transition-colors cursor-pointer"
+                      >
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-1">
+                    <Link
+                      href="/login"
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        if (onOpenAuth) onOpenAuth();
+                      }}
+                      className="block w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-800/50 hover:text-white transition-colors"
+                    >
+                      Sign In
+                    </Link>
+                    <Link
+                      href="/signup"
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        if (onOpenAuth) onOpenAuth();
+                      }}
+                      className="block w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-800/50 hover:text-white transition-colors"
+                    >
+                      Create Account
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ── 3. Canvas Launch CTA Button ("Go to Canvas" when logged in, "Launch Canvas" when logged out) ── */}
           <motion.div whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.03 }}>
             <Link
               href="/canvas"
-              className="relative group px-4 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-mono font-bold text-white bg-zinc-900 dark:bg-zinc-950 border border-cyan-500/40 dark:border-neon-cyan/40 hover:border-cyan-400 dark:hover:border-neon-cyan shadow-[0_0_16px_rgba(0,245,255,0.25)] hover:shadow-[0_0_24px_rgba(0,245,255,0.5)] backdrop-blur-xl transition-all duration-300 flex items-center gap-2"
+              className="relative group px-4 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-mono font-bold text-white bg-zinc-900 dark:bg-zinc-950 border border-cyan-500/40 dark:border-neon-cyan/40 hover:border-cyan-400 dark:hover:border-neon-cyan shadow-[0_0_16px_rgba(0,245,255,0.25)] hover:shadow-[0_0_24px_rgba(0,245,255,0.5)] backdrop-blur-xl transition-all duration-300 flex items-center gap-2 whitespace-nowrap"
             >
-              <span className="relative z-10">Launch Canvas</span>
+              <span className="relative z-10">
+                {currentUser ? "Go to Canvas" : "Launch Canvas"}
+              </span>
               <ArrowRight className="w-3.5 h-3.5 text-cyan-400 dark:text-neon-cyan group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </motion.div>
@@ -121,7 +249,7 @@ export function Navbar({ onOpenAuth }: NavbarProps) {
           {/* Mobile Menu Toggle Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-xl border border-black/10 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
+            className="md:hidden p-2 rounded-xl border border-black/10 dark:border-white/10 text-zinc-700 dark:text-zinc-300 cursor-pointer"
             aria-label="Toggle menu"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -166,6 +294,55 @@ export function Navbar({ onOpenAuth }: NavbarProps) {
             >
               Contact
             </a>
+
+            {/* Mobile Sign In or User Status */}
+            {!currentUser ? (
+              <div className="border-t border-black/5 dark:border-white/10 pt-2 space-y-1">
+                <Link
+                  href="/login"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    if (onOpenAuth) onOpenAuth();
+                  }}
+                  className="block text-cyan-600 dark:text-neon-cyan font-semibold py-1"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/signup"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    if (onOpenAuth) onOpenAuth();
+                  }}
+                  className="block text-zinc-700 dark:text-zinc-300 hover:text-white py-1"
+                >
+                  Create Account
+                </Link>
+              </div>
+            ) : (
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 py-1 border-t border-black/5 dark:border-white/10 pt-2 space-y-1.5">
+                <div className="truncate">
+                  Logged in as: <span className="text-zinc-800 dark:text-zinc-200 font-bold">{currentUser.email}</span>
+                </div>
+                <Link
+                  href="/canvas"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block text-zinc-700 dark:text-zinc-300 hover:text-white py-1"
+                >
+                  Profile Settings
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleSignOut();
+                  }}
+                  className="block text-red-400 hover:text-red-300 py-1 text-left w-full cursor-pointer"
+                >
+                  Sign Out
+                </button>
+              </div>
+            )}
 
             {/* Mobile Admin Link (Rendered only if admin) */}
             {currentUser?.role === "admin" && (

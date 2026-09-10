@@ -99,7 +99,7 @@ export function LiveShareModal({
           />
 
           {/* Modal Panel (Glassmorphism Card) */}
-          <div className="relative w-full max-w-lg rounded-3xl bg-white/85 dark:bg-[#0d111a]/90 backdrop-blur-xl border border-black/10 dark:border-white/15 shadow-[0_24px_64px_rgba(0,0,0,0.35)] dark:shadow-[0_24px_64px_rgba(0,0,0,0.85)] overflow-hidden z-10 text-zinc-900 dark:text-zinc-100 animate-scale-in">
+          <div className="relative w-[95%] md:max-w-2xl mx-auto rounded-3xl bg-white/85 dark:bg-[#0d111a]/90 backdrop-blur-xl border border-black/10 dark:border-white/15 shadow-[0_24px_64px_rgba(0,0,0,0.35)] dark:shadow-[0_24px_64px_rgba(0,0,0,0.85)] overflow-hidden z-10 text-zinc-900 dark:text-zinc-100 animate-scale-in">
             
             {/* Ambient Top Glow */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-1 bg-gradient-to-r from-transparent via-cyan-400 dark:via-neon-cyan to-transparent" />

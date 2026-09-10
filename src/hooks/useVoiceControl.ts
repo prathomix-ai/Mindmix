@@ -318,6 +318,9 @@ export function useVoiceControl(events: UseVoiceControlEvents) {
       setIsListening(true);
     };
 
+    let lastTranscriptUpdate = 0;
+    let transcriptThrottleTimer: ReturnType<typeof setTimeout> | null = null;
+
     recognition.onresult = (event: any) => {
       let interim = "";
       let finalTranscript = "";
@@ -331,9 +334,14 @@ export function useVoiceControl(events: UseVoiceControlEvents) {
         }
       }
 
-      setLiveTranscript(interim || finalTranscript);
-
       if (finalTranscript) {
+        // Clear any pending interim throttle timer and commit final transcript immediately
+        if (transcriptThrottleTimer) {
+          clearTimeout(transcriptThrottleTimer);
+          transcriptThrottleTimer = null;
+        }
+        setLiveTranscript(finalTranscript);
+
         const cmd = classifyIntent(finalTranscript);
         if (cmd) {
           setLastCommand(cmd);
@@ -341,6 +349,19 @@ export function useVoiceControl(events: UseVoiceControlEvents) {
           executeIntent(cmd);
         }
         setTimeout(() => setLiveTranscript(""), 1200);
+      } else if (interim) {
+        // Throttle interim updates to >= 100ms to avoid React re-render thrashing on low-end hardware
+        const now = performance.now();
+        if (now - lastTranscriptUpdate >= 100) {
+          lastTranscriptUpdate = now;
+          setLiveTranscript(interim);
+        } else if (!transcriptThrottleTimer) {
+          transcriptThrottleTimer = setTimeout(() => {
+            setLiveTranscript(interim);
+            lastTranscriptUpdate = performance.now();
+            transcriptThrottleTimer = null;
+          }, 100);
+        }
       }
     };
 
@@ -369,6 +390,9 @@ export function useVoiceControl(events: UseVoiceControlEvents) {
     recognitionRef.current = recognition;
 
     return () => {
+      if (transcriptThrottleTimer) {
+        clearTimeout(transcriptThrottleTimer);
+      }
       try {
         recognition.stop();
       } catch {

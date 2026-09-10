@@ -37,7 +37,7 @@ export default function LandingPage() {
       icon: Search,
       title: "Never Lose a Single Idea",
       description:
-        "Ask your canvas anything in plain English (e.g., “Find that auth flow from Tuesday”). MindMix instantly remembers and retrieves your past architectures.",
+        "Ask your canvas anything in plain English (e.g., “Find that auth flow from Tuesday”). WasmSpace instantly remembers and retrieves your past architectures.",
       color: "purple",
       isPro: true,
     },
@@ -201,7 +201,7 @@ export default function LandingPage() {
             transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
           >
             <p className="max-w-3xl mx-auto text-base sm:text-lg md:text-xl text-gray-600 dark:text-gray-400 leading-relaxed font-sans">
-              MindMix isn&apos;t just a whiteboard. It&apos;s your AI co-pilot. Draw messy diagrams, and we&apos;ll perfect them. Write Python code, and watch it run right on the canvas. No context switching, just pure flow.
+              WasmSpace isn&apos;t just a whiteboard. It&apos;s your AI co-pilot. Draw messy diagrams, and we&apos;ll perfect them. Write Python code, and watch it run right on the canvas. No context switching, just pure flow.
             </p>
           </motion.div>
 
@@ -261,7 +261,7 @@ export default function LandingPage() {
                   <div className="w-3 h-3 rounded-full bg-red-500/80" />
                   <div className="w-3 h-3 rounded-full bg-amber-500/80" />
                   <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
-                  <span className="ml-2 font-mono text-xs text-gray-500 dark:text-zinc-500">architecture-diagram.mindmix</span>
+                  <span className="ml-2 font-mono text-xs text-gray-500 dark:text-zinc-500">architecture-diagram.wasmspace</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs font-mono text-cyan-600 dark:text-neon-cyan">
                   <span className="w-2 h-2 rounded-full bg-cyan-500 dark:bg-neon-cyan animate-ping" />
@@ -294,7 +294,7 @@ export default function LandingPage() {
                     <Search className="w-4 h-4" /> Never Lose a Single Idea
                   </div>
                   <p className="text-[11px] text-gray-600 dark:text-zinc-400 leading-relaxed font-sans">
-                    Ask your canvas anything in plain English. MindMix instantly remembers and retrieves past architectures.
+                    Ask your canvas anything in plain English. WasmSpace instantly remembers and retrieves past architectures.
                   </p>
                 </div>
               </div>
@@ -514,7 +514,7 @@ export default function LandingPage() {
           {/* Bottom Copyright & Branding */}
           <div className="pt-8 border-t border-gray-200 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500 dark:text-zinc-500 font-mono">
             <div>
-              © {new Date().getFullYear()} MindMix AI OS. All rights reserved.
+              © {new Date().getFullYear()} WasmSpace AI OS. All rights reserved.
             </div>
 
             {/* Required exact text with hyperlink and hover glow */}

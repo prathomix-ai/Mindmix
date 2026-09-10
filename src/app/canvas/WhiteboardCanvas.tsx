@@ -9,13 +9,9 @@ import {
   Sparkles,
   Send,
   Square,
-  Triangle,
-  Circle,
   Diamond,
-  ArrowRight,
   Type,
   StickyNote,
-  Cloud,
   Database,
   Trash2,
   Star,
@@ -24,8 +20,6 @@ import {
   Grid2X2,
   ListTodo,
   Route,
-  Briefcase,
-  PenTool,
   Loader2,
 } from "lucide-react";
 import "@excalidraw/excalidraw/index.css";
@@ -48,21 +42,35 @@ import { type BoardFileNode } from "@/types/explorer";
 import { type RenderedPdfPage } from "@/lib/pdfImporter";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Excalidraw — Dynamic SSR-Free Import (100% Open-Source MIT Whiteboard Engine)
+// Excalidraw — Dynamic SSR-Free Import (Strict Lazy Loading for 4GB RAM Laptops)
 // ─────────────────────────────────────────────────────────────────────────────
-const Excalidraw = dynamic(
-  () => import("@excalidraw/excalidraw").then((mod) => mod.Excalidraw),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-screen w-screen items-center justify-center bg-[#06070a] text-zinc-400 font-mono text-sm">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-neon-cyan border-t-transparent animate-spin" />
-          <span className="text-zinc-300">Initializing MindMix Excalidraw Engine…</span>
+export function CanvasSkeletonLoader() {
+  return (
+    <div className="flex h-screen w-screen items-center justify-center bg-[#06070a] text-zinc-400 font-mono text-sm">
+      <div className="flex flex-col items-center gap-4">
+        <div className="relative flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full border-2 border-neon-cyan/20 border-t-neon-cyan animate-spin" />
+          <div
+            className="absolute w-6 h-6 rounded-full border border-violet-500/30 border-b-violet-400 animate-spin"
+            style={{ animationDirection: "reverse", animationDuration: "1.5s" }}
+          />
+        </div>
+        <div className="flex flex-col items-center gap-1 text-center">
+          <span className="text-zinc-200 font-semibold tracking-wide text-sm">
+            WasmSpace Canvas Engine
+          </span>
+          <span className="text-xs text-zinc-500 font-mono">
+            Streaming WebAssembly & Excalidraw assets…
+          </span>
         </div>
       </div>
-    ),
-  }
+    </div>
+  );
+}
+
+const Excalidraw = dynamic(
+  () => import("@excalidraw/excalidraw").then((mod) => mod.Excalidraw),
+  { ssr: false, loading: () => <CanvasSkeletonLoader /> }
 );
 
 // Initial File Tree for VS Code-Style Explorer
@@ -586,7 +594,7 @@ export default function WhiteboardCanvas() {
         return;
       }
 
-      let newElements: any[] = [];
+      const newElements: any[] = [];
       let labelMsg = "";
 
       switch (commandType) {
@@ -1572,7 +1580,7 @@ export default function WhiteboardCanvas() {
         // console.log(`[Multiplayer Sync] Broadcasted ${elements.length} elements for board ${activeFileId}`);
       }, 150);
     },
-    [activeFileId]
+    []
   );
 
   /**
@@ -2383,11 +2391,11 @@ export default function WhiteboardCanvas() {
         {/* ── AI Canvas Assistant: Floating Action Button (FAB) & Glassmorphism Chatbot ── */}
         {!isPresentMode && !isExecutiveMode && (
           <>
-            {/* Glowing FAB Button at bottom-right */}
+            {/* Glowing FAB Button at bottom-right (bottom-20 on mobile to not block touch controls) */}
             <button
               id="ai-chatbot-fab"
               onClick={() => setIsChatOpen((prev) => !prev)}
-              className={`fixed bottom-6 right-8 z-50 p-3.5 rounded-full backdrop-blur-xl border transition-all duration-300 shadow-xl flex items-center justify-center pointer-events-auto group ${
+              className={`fixed bottom-20 md:bottom-6 right-4 md:right-8 z-40 p-3 md:p-3.5 rounded-full backdrop-blur-xl border transition-all duration-300 shadow-xl flex items-center justify-center pointer-events-auto group ${
                 isChatOpen
                   ? "bg-neon-cyan/25 border-neon-cyan text-neon-cyan shadow-[0_0_25px_rgba(0,245,255,0.5)] scale-105"
                   : "bg-black/60 border-white/20 text-zinc-300 hover:text-neon-cyan hover:border-neon-cyan/60 hover:shadow-[0_0_20px_rgba(0,245,255,0.4)] hover:scale-105"
@@ -2402,7 +2410,7 @@ export default function WhiteboardCanvas() {
               </span>
             </button>
 
-            {/* Slide-in Sleek Glassmorphism Chat Panel */}
+            {/* Slide-in Sleek Glassmorphism Chat Panel & Quick Commands */}
             <AnimatePresence>
               {isChatOpen && (
                 <motion.div
@@ -2410,7 +2418,7 @@ export default function WhiteboardCanvas() {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 20, scale: 0.95 }}
                   transition={{ duration: 0.2, ease: "easeOut" }}
-                  className="fixed bottom-20 right-8 w-80 bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-4 z-50 flex flex-col gap-4 shadow-2xl pointer-events-auto"
+                  className="fixed bottom-20 right-4 sm:right-8 w-[calc(100vw-2rem)] sm:w-80 max-w-sm bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl p-3 sm:p-4 z-40 flex flex-col gap-3 sm:gap-4 shadow-2xl pointer-events-auto"
                 >
                   {/* Header */}
                   <div className="flex items-center justify-between border-b border-white/10 pb-3">

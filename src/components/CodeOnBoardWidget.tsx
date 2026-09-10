@@ -59,6 +59,47 @@ export default function CodeOnBoardWidget({
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const autoRunTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const workerRef = useRef<Worker | null>(null);
+
+  // Pyodide Web Worker lifecycle: Initialize ONLY when Code Studio panel is opened, terminate on close
+  useEffect(() => {
+    if (!isOpen) {
+      if (workerRef.current) {
+        workerRef.current.terminate();
+        workerRef.current = null;
+      }
+      return;
+    }
+
+    // Initialize dedicated Pyodide WebAssembly worker off the main thread
+    try {
+      const worker = new Worker("/pyodide.worker.js");
+      workerRef.current = worker;
+
+      worker.onmessage = (e: MessageEvent) => {
+        const data = e.data || {};
+        if (data.type === "STATUS") {
+          setStatusMessage(data.message || "Worker processing…");
+        }
+      };
+
+      worker.onerror = (err) => {
+        console.error("Pyodide worker error:", err);
+      };
+
+      // Send initial warm-up signal in background
+      worker.postMessage({ type: "INIT" });
+    } catch (err) {
+      console.warn("Could not instantiate pyodide.worker.js, falling back to universal runner:", err);
+    }
+
+    return () => {
+      if (workerRef.current) {
+        workerRef.current.terminate();
+        workerRef.current = null;
+      }
+    };
+  }, [isOpen]);
 
   // Current language metadata
   const currentLangInfo =
@@ -101,12 +142,77 @@ export default function CodeOnBoardWidget({
     }
   };
 
-  // Run code handler
+  // Run code handler (routes Python to dedicated background worker with postMessage/onmessage)
   const handleRun = useCallback(async () => {
     if (isRunning) return;
     setIsRunning(true);
     setStatusMessage(`Running ${currentLangInfo.name}…`);
 
+    // 1. Offload Python execution to dedicated Web Worker (Zero UI Freeze on 4GB RAM)
+    if (language === "python" && workerRef.current) {
+      const worker = workerRef.current;
+
+      return new Promise<void>((resolve) => {
+        const timeoutId = setTimeout(() => {
+          worker.removeEventListener("message", workerListener);
+          setResult({
+            stdout: "",
+            stderr: "Execution timed out after 30 seconds",
+            returnValue: null,
+            executionTimeMs: 30000,
+            error: "Timeout",
+            timestamp: new Date().toISOString(),
+            language: "python",
+          });
+          setStatusMessage("Timed out");
+          setIsRunning(false);
+          resolve();
+        }, 30000);
+
+        const workerListener = (e: MessageEvent) => {
+          const data = e.data || {};
+          if (data.type === "STATUS") {
+            setStatusMessage(data.message || "Executing in Pyodide Worker…");
+            return;
+          }
+
+          clearTimeout(timeoutId);
+          worker.removeEventListener("message", workerListener);
+
+          if (data.type === "SUCCESS") {
+            setResult({
+              stdout: data.stdout || "",
+              stderr: data.stderr || "",
+              returnValue: data.returnValue || null,
+              executionTimeMs: data.executionTimeMs || 0,
+              error: null,
+              timestamp: new Date().toISOString(),
+              language: "python",
+            });
+            setStatusMessage("Completed");
+          } else {
+            setResult({
+              stdout: data.stdout || "",
+              stderr: data.stderr || data.error || "Execution error",
+              returnValue: null,
+              executionTimeMs: data.executionTimeMs || 0,
+              error: data.error || "Execution Failed",
+              timestamp: new Date().toISOString(),
+              language: "python",
+            });
+            setStatusMessage("Error");
+          }
+          setIsRunning(false);
+          resolve();
+        };
+
+        worker.addEventListener("message", workerListener);
+        // Post message with code string to Pyodide worker
+        worker.postMessage({ type: "RUN_PYTHON", code });
+      });
+    }
+
+    // 2. Other languages or fallback
     try {
       const res = await executeUniversalCode(code, language, (msg) => {
         setStatusMessage(msg);
@@ -229,7 +335,7 @@ export default function CodeOnBoardWidget({
     setTimeout(() => setIsCopied(false), 2000);
   };
 
-  // Drag listeners on header
+  // Drag listeners on header (Throttled to >= 100ms to save CPU & memory on low-end hardware)
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (
       (e.target as HTMLElement).closest("button") ||
@@ -238,11 +344,16 @@ export default function CodeOnBoardWidget({
     ) {
       return;
     }
+
     isDraggingRef.current = true;
     dragStartOffsetRef.current = {
       x: e.clientX - position.x,
       y: e.clientY - position.y,
     };
+
+    let lastUpdateTime = 0;
+    let pendingPosition: { x: number; y: number } | null = null;
+    let throttleTimer: ReturnType<typeof setTimeout> | null = null;
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       if (!isDraggingRef.current) return;
@@ -254,11 +365,35 @@ export default function CodeOnBoardWidget({
         10,
         Math.min(window.innerHeight - 120, moveEvent.clientY - dragStartOffsetRef.current.y)
       );
-      setPosition({ x: newX, y: newY });
+
+      pendingPosition = { x: newX, y: newY };
+      const now = performance.now();
+
+      // Enforce at least 100ms throttle interval to prevent per-frame React state re-renders
+      if (now - lastUpdateTime >= 100) {
+        lastUpdateTime = now;
+        setPosition(pendingPosition);
+      } else if (!throttleTimer) {
+        throttleTimer = setTimeout(() => {
+          if (isDraggingRef.current && pendingPosition) {
+            setPosition(pendingPosition);
+            lastUpdateTime = performance.now();
+          }
+          throttleTimer = null;
+        }, 100);
+      }
     };
 
     const handleMouseUp = () => {
       isDraggingRef.current = false;
+      if (throttleTimer) {
+        clearTimeout(throttleTimer);
+        throttleTimer = null;
+      }
+      // Commit final position immediately on drop
+      if (pendingPosition) {
+        setPosition(pendingPosition);
+      }
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
@@ -644,3 +779,6 @@ export default function CodeOnBoardWidget({
     </AnimatePresence>
   );
 }
+
+// Named alias export for CodeStudio
+export { CodeOnBoardWidget as CodeStudio };

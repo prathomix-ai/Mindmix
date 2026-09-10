@@ -1394,6 +1394,15 @@ body {
   transition: all 0.25s ease;
 }
 
+@media (max-width: 768px) {
+  .voice-control-dock {
+    bottom: 5rem; /* bottom-20 on mobile */
+    left: 1rem;
+    padding: 0.75rem; /* p-3 */
+    max-width: calc(100vw - 2rem);
+  }
+}
+
 .voice-mic-btn {
   position: relative;
   width: 38px;

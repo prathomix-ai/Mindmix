@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 
 interface PresentationModeHUDProps {
@@ -21,16 +21,34 @@ export default function PresentationModeHUD({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
 
-  // Laser Pointer cursor tracker
+  // Laser Pointer cursor tracker (Throttled to >= 100ms to preserve memory & CPU on low-end devices)
   useEffect(() => {
     if (!isActive || !laserActive) return;
 
+    let lastUpdate = 0;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
     const handleMouseMove = (e: MouseEvent) => {
-      setLaserPos({ x: e.clientX, y: e.clientY });
+      const now = performance.now();
+      const pos = { x: e.clientX, y: e.clientY };
+
+      if (now - lastUpdate >= 100) {
+        lastUpdate = now;
+        setLaserPos(pos);
+      } else if (!timer) {
+        timer = setTimeout(() => {
+          setLaserPos(pos);
+          lastUpdate = performance.now();
+          timer = null;
+        }, 100);
+      }
     };
 
     window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    return () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
   }, [isActive, laserActive]);
 
   // Fullscreen state listener
@@ -42,13 +60,56 @@ export default function PresentationModeHUD({
     return () => document.removeEventListener("fullscreenchange", handleFsChange);
   }, []);
 
+  // Slide navigation by zooming to shapes sequentially (Wrapped in useCallback)
+  const getCanvasShapes = useCallback(() => {
+    if (excalidrawAPI?.getSceneElements) {
+      return excalidrawAPI.getSceneElements().filter((el: any) => !el?.isDeleted);
+    }
+    if (editor?.getCurrentPageShapes && typeof editor.getCurrentPageShapes === "function") {
+      return Array.from(editor.getCurrentPageShapes());
+    }
+    return [];
+  }, [excalidrawAPI, editor]);
+
+  const handleNextSlide = useCallback(() => {
+    const shapes = getCanvasShapes();
+    if (!shapes || shapes.length === 0) return;
+    const nextIdx = (currentSlideIndex + 1) % shapes.length;
+    setCurrentSlideIndex(nextIdx);
+    const targetShape = shapes[nextIdx];
+    if (targetShape) {
+      if (excalidrawAPI?.scrollToContent) {
+        excalidrawAPI.scrollToContent([targetShape], { fitToViewport: true });
+      } else if (editor?.select && editor?.zoomToSelection) {
+        editor.select(targetShape.id);
+        editor.zoomToSelection({ animation: { duration: 350 } });
+      }
+    }
+  }, [getCanvasShapes, currentSlideIndex, excalidrawAPI, editor]);
+
+  const handlePrevSlide = useCallback(() => {
+    const shapes = getCanvasShapes();
+    if (!shapes || shapes.length === 0) return;
+    const prevIdx = (currentSlideIndex - 1 + shapes.length) % shapes.length;
+    setCurrentSlideIndex(prevIdx);
+    const targetShape = shapes[prevIdx];
+    if (targetShape) {
+      if (excalidrawAPI?.scrollToContent) {
+        excalidrawAPI.scrollToContent([targetShape], { fitToViewport: true });
+      } else if (editor?.select && editor?.zoomToSelection) {
+        editor.select(targetShape.id);
+        editor.zoomToSelection({ animation: { duration: 350 } });
+      }
+    }
+  }, [getCanvasShapes, currentSlideIndex, excalidrawAPI, editor]);
+
   // Keyboard shortcut: Esc to exit present mode, Left/Right for slides
   useEffect(() => {
     if (!isActive) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onExit();
+        onExit?.();
       } else if (e.key === "ArrowRight" || e.key === "Space") {
         handleNextSlide();
       } else if (e.key === "ArrowLeft") {
@@ -58,50 +119,7 @@ export default function PresentationModeHUD({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isActive, onExit, currentSlideIndex]);
-
-  // Slide navigation by zooming to shapes sequentially
-  const getCanvasShapes = () => {
-    if (excalidrawAPI) {
-      return excalidrawAPI.getSceneElements().filter((el: any) => !el.isDeleted);
-    }
-    if (editor && typeof editor.getCurrentPageShapes === "function") {
-      return Array.from(editor.getCurrentPageShapes());
-    }
-    return [];
-  };
-
-  const handleNextSlide = () => {
-    const shapes = getCanvasShapes();
-    if (shapes.length === 0) return;
-    const nextIdx = (currentSlideIndex + 1) % shapes.length;
-    setCurrentSlideIndex(nextIdx);
-    const targetShape = shapes[nextIdx];
-    if (targetShape) {
-      if (excalidrawAPI) {
-        excalidrawAPI.scrollToContent([targetShape], { fitToViewport: true });
-      } else if (editor) {
-        editor.select(targetShape.id);
-        editor.zoomToSelection({ animation: { duration: 350 } });
-      }
-    }
-  };
-
-  const handlePrevSlide = () => {
-    const shapes = getCanvasShapes();
-    if (shapes.length === 0) return;
-    const prevIdx = (currentSlideIndex - 1 + shapes.length) % shapes.length;
-    setCurrentSlideIndex(prevIdx);
-    const targetShape = shapes[prevIdx];
-    if (targetShape) {
-      if (excalidrawAPI) {
-        excalidrawAPI.scrollToContent([targetShape], { fitToViewport: true });
-      } else if (editor) {
-        editor.select(targetShape.id);
-        editor.zoomToSelection({ animation: { duration: 350 } });
-      }
-    }
-  };
+  }, [isActive, onExit, handleNextSlide, handlePrevSlide]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -144,12 +162,12 @@ export default function PresentationModeHUD({
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 80, opacity: 0 }}
         transition={{ type: "spring", stiffness: 350, damping: 28 }}
-        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-2.5 rounded-full bg-void-dark/85 backdrop-blur-xl border border-neon-cyan/30 shadow-[0_0_30px_rgba(0,245,255,0.25)] text-white select-none"
+        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-2.5 rounded-2xl bg-[#0a0a0a]/80 backdrop-blur-xl border border-white/10 shadow-2xl text-white select-none transition-all duration-300 ease-in-out"
       >
         {/* Presenting Indicator */}
         <div className="flex items-center gap-2 pr-3 border-r border-white/15">
-          <span className="w-2 h-2 rounded-full bg-neon-cyan animate-pulse" />
-          <span className="text-xs font-mono font-semibold tracking-wider text-neon-cyan uppercase">
+          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_rgba(6,182,212,0.6)]" />
+          <span className="text-xs font-mono font-semibold tracking-wider text-cyan-400 uppercase">
             Present Mode
           </span>
         </div>

@@ -12,7 +12,6 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
-  Sparkles,
   AlertCircle,
   CheckCircle2,
 } from "lucide-react";
@@ -62,7 +61,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
       const supabase = createClient();
 
       if (isSignUp) {
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -152,16 +151,16 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6"
     >
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-md transition-opacity"
+        className="fixed inset-0 bg-[#050505]/75 backdrop-blur-xl transition-opacity"
         onClick={onClose}
       />
 
       {/* Modal Box */}
-      <div className="relative w-full max-w-md rounded-3xl bg-white/90 dark:bg-[#0d111a]/95 backdrop-blur-xl border border-black/10 dark:border-white/15 shadow-[0_24px_64px_rgba(0,0,0,0.35)] dark:shadow-[0_24px_64px_rgba(0,0,0,0.85)] overflow-hidden z-10 text-zinc-900 dark:text-zinc-100 p-6 sm:p-8 space-y-6">
+      <div className="relative w-[95%] md:max-w-2xl mx-auto rounded-3xl bg-white/95 dark:bg-[#0a0a0a]/90 backdrop-blur-xl border border-black/10 dark:border-white/10 shadow-2xl overflow-hidden z-10 text-zinc-900 dark:text-zinc-100 p-5 sm:p-8 space-y-5 sm:space-y-6">
         
         {/* Top Header */}
         <div className="flex items-center justify-between">
@@ -169,7 +168,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
             <div className="w-10 h-10 flex items-center justify-center shrink-0">
               <Image
                 src="/mindmix-logo-v2.png"
-                alt="MindMix Logo"
+                alt="WasmSpace Logo"
                 width={40}
                 height={40}
                 className="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(168,85,247,0.55)]"
@@ -177,7 +176,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
             </div>
             <div>
               <h3 className="font-mono font-bold text-lg tracking-tight">
-                {isSignUp ? "Create MindMix Account" : "Sign In to MindMix"}
+                {isSignUp ? "Create WasmSpace Account" : "Sign In to WasmSpace"}
               </h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 font-sans">
                 Access your whiteboard and cloud sync

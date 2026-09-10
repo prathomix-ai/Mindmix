@@ -1,15 +1,24 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export const metadata: Metadata = {
-  title: "MindMix — Infinite AI Smart Whiteboard",
+  title: "WasmSpace — The Infinite Coding Canvas",
   description:
-    "The Infinite AI Canvas for Modern Teams & Thinkers. Draw, code, present, and brainstorm with auto-shape recognition, in-browser Python WASM, and live meeting summaries.",
+    "The Infinite Coding & AI Canvas for Modern Teams & Thinkers. Draw, code, present, and brainstorm with auto-shape recognition, in-browser WASM runtime, and live meeting summaries.",
   keywords: [
+    "wasmspace",
+    "coding canvas",
     "whiteboard",
     "collaboration",
     "AI",
@@ -20,8 +29,8 @@ export const metadata: Metadata = {
     "meeting summary",
   ],
   openGraph: {
-    title: "MindMix — Infinite AI Smart Whiteboard",
-    description: "The Infinite AI Canvas for Modern Teams & Thinkers.",
+    title: "WasmSpace — The Infinite Coding Canvas",
+    description: "The Infinite Coding & AI Canvas for Modern Teams & Thinkers.",
     type: "website",
     url: "https://prathomix.tech",
   },
@@ -39,6 +48,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
+      <head>
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"
+        />
+      </head>
       <body className="antialiased min-h-screen bg-slate-50 dark:bg-void text-zinc-900 dark:text-zinc-100 transition-colors duration-200">
         <ThemeProvider
           attribute="class"

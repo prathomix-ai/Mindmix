@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -20,6 +20,8 @@ import {
   PenTool,
   StickyNote,
   ArrowLeft,
+  Menu,
+  X,
 } from "lucide-react";
 
 interface LeftSidebarProps {
@@ -76,6 +78,8 @@ export function LeftSidebar({
   onSelectPenTool,
   onAddStickyNote,
 }: LeftSidebarProps) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   // Natural flexbox PRO Badge (no absolute positioning)
   const ProBadge = () => (
     <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shrink-0 font-mono leading-none select-none">
@@ -84,11 +88,12 @@ export function LeftSidebar({
   );
 
   return (
-    <aside
-      className={`h-full flex-shrink-0 relative z-50 flex flex-col overflow-y-auto custom-scrollbar bg-black/40 backdrop-blur-md border-r border-white/10 select-none transition-all duration-300 ${
-        isCollapsed ? "w-[72px] p-2 gap-3" : "w-64 p-4 gap-4"
-      }`}
-    >
+    <>
+      <aside
+        className={`hidden md:flex flex-col h-full flex-shrink-0 relative z-50 overflow-y-auto custom-scrollbar bg-black/40 backdrop-blur-md border-r border-white/10 select-none transition-all duration-300 ${
+          isCollapsed ? "w-[72px] p-2 gap-3" : "w-64 p-4 gap-4"
+        }`}
+      >
       {/* ── 1. Header: Logo & Collapse Button ── */}
       <div
         className={`flex items-center mb-2 shrink-0 ${
@@ -100,19 +105,19 @@ export function LeftSidebar({
             <Link
               href="/"
               className="flex items-center gap-2.5 group hover:opacity-90 transition-opacity"
-              title="MindMix Whiteboard OS"
+              title="WasmSpace Whiteboard OS"
             >
               <div className="w-8 h-8 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 duration-300">
                 <Image
                   src="/mindmix-logo-v2.png"
-                  alt="MindMix Logo"
+                  alt="WasmSpace Logo"
                   width={32}
                   height={32}
                   className="w-full h-full object-contain drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]"
                 />
               </div>
               <span className="font-bold text-white tracking-tight font-sans text-base">
-                MindMix
+                WasmSpace
               </span>
             </Link>
 
@@ -131,7 +136,7 @@ export function LeftSidebar({
             <Link
               href="/"
               className="p-1 rounded-xl hover:bg-white/5 transition-colors group"
-              title="MindMix Whiteboard OS"
+              title="WasmSpace Whiteboard OS"
             >
               <div className="w-8 h-8 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 duration-300">
                 <Image
@@ -484,7 +489,7 @@ export function LeftSidebar({
             className={`flex items-center w-full rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-sm font-semibold select-none ${
               isCollapsed ? "justify-center p-2.5" : "justify-between px-3 py-2.5"
             }`}
-            title="MindMix PRO Subscriber Active"
+            title="WasmSpace PRO Subscriber Active"
           >
             <div className="flex items-center gap-3">
               <Crown className="w-5 h-5 fill-amber-400 text-amber-400 shrink-0" />
@@ -499,7 +504,7 @@ export function LeftSidebar({
             className={`flex items-center w-full rounded-lg bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 border border-cyan-400/40 text-cyan-300 text-sm font-bold shadow-[0_0_15px_rgba(6,182,212,0.2)] transition-all cursor-pointer group ${
               isCollapsed ? "justify-center p-2.5" : "justify-between px-3 py-2.5"
             }`}
-            title="Upgrade to MindMix PRO"
+            title="Upgrade to WasmSpace PRO"
           >
             <div className="flex items-center gap-3">
               <Crown className="w-5 h-5 fill-cyan-400 text-cyan-400 opacity-80 group-hover:opacity-100 transition-opacity shrink-0" />
@@ -513,7 +518,312 @@ export function LeftSidebar({
           </button>
         )}
       </div>
-    </aside>
+      </aside>
+
+      {/* ── Mobile Top Bar with Hamburger Menu (flex md:hidden) ── */}
+      <header className="flex md:hidden fixed top-0 left-0 right-0 z-40 h-12 items-center justify-between px-3 bg-black/80 backdrop-blur-xl border-b border-white/10 select-none">
+        <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-1.5" title="WasmSpace">
+            <Image
+              src="/mindmix-logo-v2.png"
+              alt="WasmSpace Logo"
+              width={24}
+              height={24}
+              className="w-6 h-6 object-contain drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]"
+            />
+            <span className="font-bold text-white tracking-tight text-xs">WasmSpace</span>
+          </Link>
+          <input
+            type="text"
+            value={boardTitle}
+            onChange={(e) => onBoardTitleChange(e.target.value)}
+            placeholder="Untitled"
+            maxLength={30}
+            className="w-24 xs:w-32 bg-white/5 border border-white/10 rounded px-2 py-0.5 text-xs text-zinc-200 truncate outline-none focus:border-cyan-400/60"
+            title="Rename Session"
+          />
+        </div>
+
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onCodeStudioClick}
+            className={`p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
+              isCodeOpen
+                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/40"
+                : "text-zinc-300 hover:bg-white/10"
+            }`}
+            title="Code Studio"
+          >
+            <Code2 className="w-4 h-4 text-emerald-400" />
+          </button>
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            className="p-1.5 rounded-lg text-zinc-300 hover:bg-white/10 transition-colors cursor-pointer"
+            title="Settings"
+            aria-label="Settings"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
+            className="p-1.5 rounded-lg text-zinc-300 hover:bg-white/10 border border-white/10 transition-colors cursor-pointer"
+            title="Menu"
+            aria-label="Toggle menu"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
+        </div>
+      </header>
+
+      {/* ── Mobile Bottom Navigation Bar (flex md:hidden) ── */}
+      <nav
+        aria-label="Mobile Navigation"
+        className="flex md:hidden fixed bottom-0 left-0 right-0 z-50 h-16 items-center justify-around px-2 bg-black/90 backdrop-blur-xl border-t border-white/10 select-none"
+      >
+        {/* Code Studio */}
+        <button
+          type="button"
+          onClick={onCodeStudioClick}
+          className={`flex flex-col items-center justify-center gap-1 py-1 px-2.5 rounded-xl transition-colors cursor-pointer ${
+            isCodeOpen ? "text-emerald-400 font-semibold" : "text-zinc-400 hover:text-zinc-200"
+          }`}
+          title="Code Studio"
+        >
+          <Code2 className="w-5 h-5" />
+          <span className="text-[10px] leading-none">Code</span>
+        </button>
+
+        {/* Voice AI */}
+        <button
+          type="button"
+          onClick={onVoiceClick}
+          className={`flex flex-col items-center justify-center gap-1 py-1 px-2.5 rounded-xl transition-colors cursor-pointer ${
+            isVoiceListening ? "text-purple-400 animate-pulse font-semibold" : "text-zinc-400 hover:text-zinc-200"
+          }`}
+          title="Voice AI"
+        >
+          <Bot className="w-5 h-5" />
+          <span className="text-[10px] leading-none">Voice</span>
+        </button>
+
+        {/* Board Brain */}
+        <button
+          type="button"
+          onClick={onBoardBrainClick}
+          disabled={isSummarising}
+          className="flex flex-col items-center justify-center gap-1 py-1 px-2.5 rounded-xl text-zinc-400 hover:text-cyan-400 transition-colors cursor-pointer disabled:opacity-50"
+          title="Board Brain"
+        >
+          <Brain className="w-5 h-5 text-cyan-400" />
+          <span className="text-[10px] leading-none">Brain</span>
+        </button>
+
+        {/* Settings */}
+        <button
+          type="button"
+          onClick={onOpenSettings}
+          className="flex flex-col items-center justify-center gap-1 py-1 px-2.5 rounded-xl text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+          title="Settings"
+        >
+          <Settings className="w-5 h-5" />
+          <span className="text-[10px] leading-none">Settings</span>
+        </button>
+
+        {/* Mobile Hamburger / Tools Menu */}
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen((prev) => !prev)}
+          className={`flex flex-col items-center justify-center gap-1 py-1 px-2.5 rounded-xl transition-colors cursor-pointer ${
+            mobileMenuOpen ? "text-cyan-400 font-semibold" : "text-zinc-400 hover:text-zinc-200"
+          }`}
+          title="Tools Menu"
+          aria-label="Toggle mobile menu"
+        >
+          <Menu className="w-5 h-5" />
+          <span className="text-[10px] leading-none">Menu</span>
+        </button>
+      </nav>
+
+      {/* ── Mobile Slide-out Drawer for All Sidebar Tools (flex md:hidden) ── */}
+      {mobileMenuOpen && (
+        <div className="flex md:hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-md">
+          <div
+            className="fixed inset-0"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="relative w-4/5 max-w-xs h-full bg-[#0a0d14] border-r border-white/15 p-4 flex flex-col gap-3 overflow-y-auto custom-scrollbar shadow-2xl z-10 text-zinc-200">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <Image
+                  src="/mindmix-logo-v2.png"
+                  alt="WasmSpace"
+                  width={28}
+                  height={28}
+                  className="w-7 h-7 object-contain"
+                />
+                <span className="font-bold text-white text-sm">WasmSpace Menu</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-white bg-white/5 border border-white/10 cursor-pointer"
+                aria-label="Close menu"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Quick Navigation List */}
+            <div className="flex flex-col gap-1 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  onCodeStudioClick();
+                  setMobileMenuOpen(false);
+                }}
+                className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl font-medium transition-colors cursor-pointer ${
+                  isCodeOpen ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "text-zinc-200 hover:bg-white/10"
+                }`}
+              >
+                <Code2 className="w-4 h-4 text-emerald-400" />
+                <span>Code Studio</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenSettings();
+                  setMobileMenuOpen(false);
+                }}
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl font-medium text-zinc-200 hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <Settings className="w-4 h-4 text-zinc-400" />
+                <span>Settings</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onVoiceClick();
+                  setMobileMenuOpen(false);
+                }}
+                className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl font-medium transition-colors cursor-pointer ${
+                  isVoiceListening ? "bg-purple-900/40 text-purple-200 border border-purple-400/40" : "text-zinc-200 hover:bg-white/10"
+                }`}
+              >
+                <Bot className="w-4 h-4 text-purple-400" />
+                <span>Voice AI {isVoiceListening ? "(Active)" : ""}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onBoardBrainClick();
+                  setMobileMenuOpen(false);
+                }}
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl font-medium text-zinc-200 hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <Brain className="w-4 h-4 text-cyan-400" />
+                <span>Board Brain AI</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onSearchClick();
+                  setMobileMenuOpen(false);
+                }}
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl font-medium text-zinc-200 hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <Search className="w-4 h-4 text-cyan-400" />
+                <span>Search Canvas</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onPresentClick();
+                  setMobileMenuOpen(false);
+                }}
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl font-medium text-zinc-200 hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <Tv className="w-4 h-4 text-rose-400" />
+                <span>Present Mode</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onShareClick();
+                  setMobileMenuOpen(false);
+                }}
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl font-medium text-zinc-200 hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <Share2 className="w-4 h-4 text-cyan-400" />
+                <span>Share &amp; Collaborate</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onToggleExplorer();
+                  setMobileMenuOpen(false);
+                }}
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl font-medium text-zinc-200 hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <FolderClosed className="w-4 h-4 text-amber-400" />
+                <span>Project Files</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onTakeScreenshot();
+                  setMobileMenuOpen(false);
+                }}
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl font-medium text-zinc-200 hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <Camera className="w-4 h-4 text-zinc-300" />
+                <span>Take Screenshot</span>
+              </button>
+
+              {onToggleExecutiveMode && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onToggleExecutiveMode();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl font-medium text-amber-300 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                >
+                  <Briefcase className="w-4 h-4 text-amber-400" />
+                  <span>Executive Focus Mode</span>
+                </button>
+              )}
+            </div>
+
+            {/* Upgrade PRO at bottom of mobile menu */}
+            <div className="mt-auto pt-3 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenProModal();
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-400/40 text-cyan-300 font-bold text-xs shadow-lg cursor-pointer"
+              >
+                <Crown className="w-4 h-4 fill-cyan-400 text-cyan-400" />
+                <span>{isProUser ? "PRO ACTIVE" : "GET PRO ACCESS"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
