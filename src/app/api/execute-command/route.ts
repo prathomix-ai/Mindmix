@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getProviderKeys } from "@/lib/ai-balancer";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Supabase Admin Client for Quota Management
@@ -16,25 +17,6 @@ const supabaseAdmin =
         auth: { persistSession: false },
       })
     : null;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Round-Robin Load Balancer Keys Pool
-// ─────────────────────────────────────────────────────────────────────────────
-function getKeys(envValue?: string, fallbackSingleKey?: string): string[] {
-  const keys: string[] = [];
-  if (envValue) {
-    keys.push(
-      ...envValue
-        .split(",")
-        .map((k) => k.trim())
-        .filter(Boolean)
-    );
-  }
-  if (fallbackSingleKey && !keys.includes(fallbackSingleKey.trim())) {
-    keys.push(fallbackSingleKey.trim());
-  }
-  return keys;
-}
 
 // Global in-memory round-robin pointer state
 let geminiPointer = 0;
@@ -229,14 +211,8 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 2. Round-Robin Key Selection & Provider Routing ──
-    const geminiKeys = getKeys(
-      process.env.GEMINI_KEYS,
-      process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY
-    );
-    const groqKeys = getKeys(
-      process.env.GROQ_KEYS,
-      process.env.GROQ_API_KEY
-    );
+    const geminiKeys = getProviderKeys("gemini");
+    const groqKeys = getProviderKeys("groq");
 
     // Strict Groq Routing for High-Speed Quick Commands (Draw Container, Decision Gateway)
     const isStrictGroqCommand =

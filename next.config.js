@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // ── Production Web Service Optimization (Render / Vercel / Docker) ───────
+  output: process.env.BUILD_STANDALONE === "true" ? "standalone" : undefined,
+  poweredByHeader: false,
+  reactStrictMode: true,
+
   // ── Package Transpilation ────────────────────────────────────────────────
   transpilePackages: [
     '@tldraw/tldraw',

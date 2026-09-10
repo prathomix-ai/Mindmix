@@ -12,11 +12,11 @@ export default function SubscriptionModule() {
   ];
 
   const recentSubscriptions = [
-    { id: "sub_9012", email: "sarah.connor@cyberdyne.io", plan: "Pro Monthly", amount: "$19/mo", status: "Active", renewedAt: "2026-09-01" },
+    { id: "sub_9012", email: "sarah.connor@cyberdyne.io", plan: "Pro Monthly", amount: "$5/mo", status: "Active", renewedAt: "2026-09-01" },
     { id: "sub_8411", email: "admin@prathomix.tech", plan: "Enterprise", amount: "Custom", status: "Active", renewedAt: "2026-08-15" },
-    { id: "sub_7720", email: "marcus.vance@solaris.dev", plan: "Pro Annual", amount: "$190/yr", status: "Active", renewedAt: "2026-08-28" },
-    { id: "sub_6519", email: "david.kim@quantumleap.ai", plan: "Pro Monthly", amount: "$19/mo", status: "Active", renewedAt: "2026-09-03" },
-    { id: "sub_5190", email: "alicia.keys@soundtrack.io", plan: "Pro Monthly", amount: "$19/mo", status: "Past Due", renewedAt: "2026-08-30" },
+    { id: "sub_7720", email: "marcus.vance@solaris.dev", plan: "Pro Annual", amount: "$49/yr", status: "Active", renewedAt: "2026-08-28" },
+    { id: "sub_6519", email: "david.kim@quantumleap.ai", plan: "Pro Monthly", amount: "$5/mo", status: "Active", renewedAt: "2026-09-03" },
+    { id: "sub_5190", email: "alicia.keys@soundtrack.io", plan: "Pro Monthly", amount: "$5/mo", status: "Past Due", renewedAt: "2026-08-30" },
   ];
 
   return (
@@ -65,7 +65,7 @@ export default function SubscriptionModule() {
             </div>
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-neon-purple" />
-              <span>Pro $19 (32%)</span>
+              <span>Pro $5 (32%)</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-neon-green" />

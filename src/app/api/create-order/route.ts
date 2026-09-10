@@ -17,28 +17,31 @@ export async function POST(req: NextRequest) {
     const { plan = "monthly", currency = "USD", receipt } = body;
     const isYearly = plan === "yearly";
 
-    // ── Razorpay Subunit Amount Calculation ──────────────────────────────────
-    // Razorpay requires amounts in lowest currency subunit (cents for USD, paise for INR)
+    // ── Razorpay Subunit (Smallest Unit) Amount Calculation ─────────────────
+    // Razorpay strictly requires amounts in lowest currency subunit (cents for USD, paise for INR)
+    // Monthly: $5.00  -> 500 cents (or 42,000 paise)
+    // Yearly:  $49.00 -> 4900 cents (or 410,000 paise)
+    const rawCurrency = (currency || "USD").toUpperCase();
     let amountInSubunits: number;
 
-    if (body.amount !== undefined && body.amount !== null && !isNaN(Number(body.amount))) {
-      // If frontend already sent the exact subunit amount
-      amountInSubunits = Math.round(Number(body.amount));
-    } else if (currency.toUpperCase() === "USD") {
-      // USD Pricing:
-      // Monthly: $5  -> 5 * 100 = 500 cents
-      // Yearly:  $49 -> 49 * 100 = 4900 cents
-      const priceDollars = isYearly ? 49 : 5;
-      amountInSubunits = priceDollars * 100;
-    } else if (currency.toUpperCase() === "INR") {
-      // INR Fallback:
-      // Monthly: $5  ≈ ₹420  -> 420 * 100 = 42000 paise
-      // Yearly:  $49 ≈ ₹4100 -> 4100 * 100 = 410000 paise
-      const priceInr = isYearly ? 4100 : 420;
-      amountInSubunits = priceInr * 100;
+    if (rawCurrency === "INR") {
+      // INR: ₹420 (≈ $5) = 42,000 paise, ₹4,100 (≈ $49) = 410,000 paise
+      if (body.amount !== undefined && Number(body.amount) >= 100) {
+        amountInSubunits = Math.round(Number(body.amount));
+      } else {
+        const inrRupees = isYearly ? 4100 : 420;
+        amountInSubunits = inrRupees * 100;
+      }
     } else {
-      const defaultDollars = isYearly ? 49 : 5;
-      amountInSubunits = defaultDollars * 100;
+      // USD / International:
+      // Critical Fix: prevent $5 from being treated as 5 cents/paise
+      if (body.amount !== undefined && Number(body.amount) >= 100) {
+        amountInSubunits = Math.round(Number(body.amount));
+      } else if (body.amount !== undefined && Number(body.amount) > 0 && Number(body.amount) < 100) {
+        amountInSubunits = Math.round(Number(body.amount) * 100);
+      } else {
+        amountInSubunits = isYearly ? 4900 : 500;
+      }
     }
 
     // Minimum 100 subunits validation (Razorpay requirement)

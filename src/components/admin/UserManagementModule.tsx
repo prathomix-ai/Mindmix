@@ -274,7 +274,7 @@ export default function UserManagementModule() {
               onChange={(e) => setTargetStatus(e.target.value as SubscriptionStatus)}
               className="w-full px-3 py-2.5 rounded-xl bg-black/50 border border-zinc-700/80 text-sm text-zinc-200 focus:outline-none focus:border-neon-cyan transition-colors font-mono"
             >
-              <option value="pro">Tier: Pro ($19/mo)</option>
+              <option value="pro">Tier: Pro ($5/mo)</option>
               <option value="enterprise">Tier: Enterprise</option>
               <option value="free">Tier: Reset to Free</option>
             </select>
